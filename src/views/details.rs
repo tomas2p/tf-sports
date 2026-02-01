@@ -1,0 +1,178 @@
+use crate::Route;
+use crate::components::ui::*;
+use crate::models::{EventoData, Evento};
+use dioxus::prelude::*;
+
+const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
+
+#[component]
+pub fn Details(id: i32) -> Element {
+    // Cargar datos
+    let eventos = use_memo(move || {
+        serde_json::from_str::<EventoData>(EVENTOS_JSON)
+            .unwrap_or(EventoData { eventos: vec![] })
+    });
+
+    // Buscar evento por índice
+    let evento = use_memo(move || {
+        let idx = id as usize;
+        eventos().eventos.get(idx).cloned()
+    });
+
+    match evento() {
+        Some(evt) => {
+            let badge_variant = match evt.get_badge_variant() {
+                "EN VIVO" => BadgeVariant::Default,
+                "PRÓXIMO" => BadgeVariant::Secondary,
+                _ => BadgeVariant::Outline,
+            };
+            
+            rsx! {
+                Container {
+                    Section {
+                        // Hero Section
+                        div { class: "space-y-4",
+                            Badge { variant: badge_variant, "{evt.get_badge_variant()}" }
+                            h1 { class: "text-4xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50",
+                                "{evt.evento_nombre}"
+                            }
+                            p { class: "text-lg text-zinc-600 dark:text-zinc-400",
+                                "{evt.get_deporte()} • {evt.format_fecha()} • {evt.evento_lugar.as_ref().unwrap_or(&\"Lugar por determinar\".to_string())}"
+                            }
+                        }
+
+                        // Información principal
+                        div { class: "grid gap-6 md:grid-cols-2 mt-8",
+                            Card {
+                                CardHeader {
+                                    CardTitle { "Información del Evento" }
+                                }
+                                CardContent {
+                                    div { class: "space-y-3",
+                                        div {
+                                            p { class: "text-sm text-zinc-600 dark:text-zinc-400",
+                                                "Organizador"
+                                            }
+                                            p { class: "text-sm font-medium text-zinc-950 dark:text-zinc-50",
+                                                "{evt.evento_organizador}"
+                                            }
+                                        }
+                                        if let Some(municipio) = &evt.municipio_nombre {
+                                            div {
+                                                p { class: "text-sm text-zinc-600 dark:text-zinc-400",
+                                                    "Municipio"
+                                                }
+                                                p { class: "text-sm font-medium text-zinc-950 dark:text-zinc-50",
+                                                    "{municipio}"
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            p { class: "text-sm text-zinc-600 dark:text-zinc-400",
+                                                "Deporte"
+                                            }
+                                            p { class: "text-sm font-medium text-zinc-950 dark:text-zinc-50",
+                                                "{evt.get_deporte()}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Card {
+                                CardHeader {
+                                    CardTitle { "Fechas" }
+                                }
+                                CardContent {
+                                    div { class: "space-y-3",
+                                        div {
+                                            p { class: "text-sm text-zinc-600 dark:text-zinc-400",
+                                                "Inicio"
+                                            }
+                                            p { class: "text-sm font-medium text-zinc-950 dark:text-zinc-50",
+                                                "{evt.format_fecha()}"
+                                            }
+                                        }
+                                        div {
+                                            p { class: "text-sm text-zinc-600 dark:text-zinc-400",
+                                                "Finalización"
+                                            }
+                                            p { class: "text-sm font-medium text-zinc-950 dark:text-zinc-50",
+                                                {
+                                                    use chrono::NaiveDateTime;
+                                                    if let Ok(fecha) = NaiveDateTime::parse_from_str(
+                                                        &evt.evento_fecha_fin,
+                                                        "%Y-%m-%d %H:%M:%S",
+                                                    ) {
+                                                        fecha.format("%d/%m/%Y • %H:%M hrs").to_string()
+                                                    } else {
+                                                        evt.evento_fecha_fin.clone()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Separator { class: "my-8" }
+
+                        // Descripción
+                        div { class: "space-y-4",
+                            h2 { class: "text-2xl font-semibold text-zinc-950 dark:text-zinc-50",
+                                "Descripción del Evento"
+                            }
+                            p { class: "text-zinc-600 dark:text-zinc-400 leading-relaxed",
+                                "{evt.evento_descripcion}"
+                            }
+
+                            if !evt.evento_url.is_empty() {
+                                div { class: "pt-4",
+                                    a {
+                                        href: "{evt.evento_url}",
+                                        target: "_blank",
+                                        class: "inline-flex items-center gap-2 text-sm font-medium text-zinc-950 dark:text-zinc-50 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors",
+                                        "Ver más información"
+                                        span { "→" }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Botón para volver
+                        div { class: "mt-8",
+                            Link {
+                                to: Route::Events {},
+                                class: "inline-flex items-center gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-50 transition-colors",
+                                span { "←" }
+                                "Volver a eventos"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None => {
+            rsx! {
+                Container {
+                    Section {
+                        div { class: "text-center py-12",
+                            h1 { class: "text-2xl font-bold text-zinc-950 dark:text-zinc-50",
+                                "Evento no encontrado"
+                            }
+                            p { class: "text-zinc-600 dark:text-zinc-400 mt-2",
+                                "El evento que buscas no existe."
+                            }
+                            div { class: "mt-6",
+                                Link { to: Route::Events {},
+                                    Button { variant: ButtonVariant::Default, "Volver a eventos" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
