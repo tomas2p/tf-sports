@@ -1,5 +1,6 @@
 use crate::Route;
 use crate::components::ui::*;
+use crate::components::{PageHeader, EmptyState, EventCardWithImage, Pagination, FilterSection, FilterConfig};
 use crate::models::{EventoData, Evento};
 use dioxus::prelude::*;
 
@@ -22,6 +23,7 @@ pub fn Events() -> Element {
   
   let mut filter_estado = use_signal(|| "Todos".to_string());
   let mut filter_deporte = use_signal(|| "Todos".to_string());
+  let mut orden = use_signal(|| "fecha_asc".to_string());
   let mut page = use_signal(|| 1);
   let items_per_page = 12;
   
@@ -40,21 +42,11 @@ pub fn Events() -> Element {
       let data = eventos_data();
       let estado_val = filter_estado();
       let deporte_val = filter_deporte();
+      let orden_val = orden();
       
-      // Fecha límite: hace una semana
-      let now = chrono::Local::now().naive_local();
-      let una_semana_atras = now - chrono::Duration::days(7);
-      
-      let filtered: Vec<(usize, Evento)> = data.eventos.into_iter()
+      let mut filtered: Vec<(usize, Evento)> = data.eventos.into_iter()
           .enumerate()
           .filter(|(_, e)| {
-              // Filtrar eventos antiguos
-              let fecha_valida = if let Ok(fecha_fin) = chrono::NaiveDateTime::parse_from_str(&e.evento_fecha_fin, "%Y-%m-%d %H:%M:%S") {
-                  fecha_fin >= una_semana_atras
-              } else {
-                  true // Si no se puede parsear, incluir el evento
-              };
-              
               let estado_match = if estado_val == "Todos" {
                   true
               } else {
@@ -67,9 +59,24 @@ pub fn Events() -> Element {
                   e.get_deporte() == deporte_val
               };
               
-              fecha_valida && estado_match && deporte_match
+              estado_match && deporte_match
           })
           .collect();
+      
+      // Ordenar
+      match orden_val.as_str() {
+          "fecha_asc" => filtered.sort_by(|a, b| 
+              a.1.evento_fecha_inicio.cmp(&b.1.evento_fecha_inicio)),
+          "fecha_desc" => filtered.sort_by(|a, b| 
+              b.1.evento_fecha_inicio.cmp(&a.1.evento_fecha_inicio)),
+          "nombre_az" => filtered.sort_by(|a, b| 
+              a.1.evento_nombre.cmp(&b.1.evento_nombre)),
+          "nombre_za" => filtered.sort_by(|a, b| 
+              b.1.evento_nombre.cmp(&a.1.evento_nombre)),
+          "deporte" => filtered.sort_by(|a, b| 
+              a.1.get_deporte().cmp(&b.1.get_deporte())),
+          _ => {}
+      }
       
       web_sys::console::log_1(&format!("Eventos filtrados: {}", filtered.len()).into());
       filtered
@@ -92,146 +99,88 @@ pub fn Events() -> Element {
     Container {
       Section {
         // Header
-        div { class: "space-y-4 mb-8",
-          h1 { class: "text-4xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50",
-            "Eventos Deportivos en Tenerife"
-          }
-          p { class: "text-lg text-zinc-600 dark:text-zinc-400",
-            "Mostrando {eventos_paginados().len()} de {eventos_filtrados().len()} eventos"
-          }
+        PageHeader {
+          title: "Eventos Deportivos en Tenerife".to_string(),
+          description: Some(
+              format!(
+                  "Mostrando {} de {} eventos",
+                  eventos_paginados().len(),
+                  eventos_filtrados().len(),
+              ),
+          ),
         }
 
         // Filtros
-        div { class: "grid gap-4 md:grid-cols-2 mb-8",
-          // Filtro de Estado
-          div {
-            label { class: "block text-sm font-medium text-zinc-950 dark:text-zinc-50 mb-2",
-              "Estado:"
-            }
-            Select {
-              value: filter_estado(),
-              onchange: move |val: String| {
-                  filter_estado.set(val);
-                  page.set(1);
+        FilterSection {
+          filters: vec![
+              FilterConfig {
+                  label: "Ordenar por:".to_string(),
+                  value: orden,
+                  options: vec![
+                      ("fecha_asc".to_string(), "Fecha (próximos primero)".to_string()),
+                      ("fecha_desc".to_string(), "Fecha (lejanos primero)".to_string()),
+                      ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
+                      ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
+                      ("deporte".to_string(), "Deporte".to_string()),
+                  ],
+                  on_change: EventHandler::new(move |val: String| orden.set(val)),
               },
-              option { value: "Todos", "Todos los estados" }
-              option { value: "EN VIVO", "En Vivo" }
-              option { value: "PRÓXIMO", "Próximos" }
-              option { value: "FINALIZADO", "Finalizados" }
-            }
-          }
-
-          // Filtro de Deporte
-          div {
-            label { class: "block text-sm font-medium text-zinc-950 dark:text-zinc-50 mb-2",
-              "Deporte:"
-            }
-            Select {
-              value: filter_deporte(),
-              onchange: move |val: String| {
-                  filter_deporte.set(val);
-                  page.set(1);
+              FilterConfig {
+                  label: "Estado:".to_string(),
+                  value: filter_estado,
+                  options: vec![
+                      ("Todos".to_string(), "Todos los estados".to_string()),
+                      ("EN VIVO".to_string(), "En Vivo".to_string()),
+                      ("PRÓXIMO".to_string(), "Próximos".to_string()),
+                      ("FINALIZADO".to_string(), "Finalizados".to_string()),
+                  ],
+                  on_change: EventHandler::new(move |val: String| {
+                      filter_estado.set(val);
+                      page.set(1);
+                  }),
               },
-              option { value: "Todos", "Todos los deportes" }
-              for deporte in deportes_disponibles() {
-                option { key: "{deporte}", value: "{deporte}", "{deporte}" }
-              }
-            }
-          }
+              FilterConfig {
+                  label: "Deporte:".to_string(),
+                  value: filter_deporte,
+                  options: {
+                      let mut opts = vec![
+                          ("Todos".to_string(), "Todos los deportes".to_string()),
+                      ];
+                      for deporte in deportes_disponibles() {
+                          opts.push((deporte.clone(), deporte));
+                      }
+                      opts
+                  },
+                  on_change: EventHandler::new(move |val: String| {
+                      filter_deporte.set(val);
+                      page.set(1);
+                  }),
+              },
+          ],
         }
 
         // Grid de eventos
-        div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-3",
+        div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
           if eventos_paginados().is_empty() {
-            div { class: "col-span-full text-center py-12",
-              p { class: "text-lg text-zinc-600 dark:text-zinc-400",
-                "No hay eventos disponibles"
+            div { class: "col-span-full",
+              EmptyState {
+                emoji: "🏆".to_string(),
+                title: "No hay eventos disponibles".to_string(),
+                message: "No se encontraron eventos con los filtros seleccionados.".to_string(),
               }
             }
           }
           for (original_idx , evento) in eventos_paginados().iter() {
-            Link {
+            EventCardWithImage {
               key: "{original_idx}",
-              to: Route::Details {
-                  id: *original_idx as i32,
-              },
-              class: "no-underline",
-              Card { class: "hover:shadow-md transition-shadow cursor-pointer h-full overflow-hidden",
-                // Imagen del deporte
-                div { class: "h-32 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center",
-                  span { class: "text-6xl", "{evento.get_deporte_emoji()}" }
-                }
-                CardHeader {
-                  Badge {
-                    variant: match evento.get_badge_variant() {
-                        "EN VIVO" => BadgeVariant::Default,
-                        "FINALIZADO" => BadgeVariant::Outline,
-                        _ => BadgeVariant::Secondary,
-                    },
-                    "{evento.get_badge_variant()}"
-                  }
-                  CardTitle { class: "mt-2 text-lg leading-tight", "{evento.evento_nombre}" }
-                }
-                CardContent {
-                  p { class: "text-sm text-zinc-600 dark:text-zinc-400 mb-2",
-                    "{evento.get_deporte()}"
-                  }
-                  p { class: "text-sm text-zinc-600 dark:text-zinc-400 mb-4",
-                    "📍 {evento.evento_lugar.as_ref().unwrap_or(&\"Lugar por determinar\".to_string()).clone()}"
-                    if let Some(ref municipio) = evento.municipio_nombre {
-                      ", {municipio}"
-                    }
-                  }
-                  p { class: "text-xs text-zinc-500 dark:text-zinc-500 mt-2",
-                    "{evento.format_fecha()}"
-                  }
-                }
-              }
+              evento: evento.clone(),
+              index: *original_idx as i32,
             }
           }
         }
 
         // Paginación
-        if total_pages() > 1 {
-          div { class: "flex justify-center items-center gap-2 mt-8",
-            Button {
-              variant: ButtonVariant::Outline,
-              size: ButtonSize::Sm,
-              onclick: move |_| {
-                  let current = page();
-                  if current > 1 {
-                      page.set(current - 1);
-                  }
-              },
-              "← Anterior"
-            }
-
-            div { class: "flex gap-1",
-              for p in 1..=total_pages() {
-                Button {
-                  key: "{p}",
-                  variant: if page() == p { ButtonVariant::Default } else { ButtonVariant::Ghost },
-                  size: ButtonSize::Sm,
-                  onclick: move |_| page.set(p),
-                  "{p}"
-                }
-              }
-            }
-
-            Button {
-              variant: ButtonVariant::Outline,
-              size: ButtonSize::Sm,
-              onclick: move |_| {
-                  let current = page();
-                  let total = total_pages();
-                  if current < total {
-                      page.set(current + 1);
-                  }
-              },
-              "Siguiente →"
-            }
-          }
-        }
+        Pagination { current_page: page, total_pages: total_pages() }
       }
     }
   }
