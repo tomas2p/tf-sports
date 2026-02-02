@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
 
 #[component]
-pub fn Details(id: i32) -> Element {
+pub fn Event(id: i32) -> Element {
     // Cargar datos
     let eventos = use_memo(move || {
         serde_json::from_str::<EventoData>(EVENTOS_JSON)

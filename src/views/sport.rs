@@ -245,7 +245,7 @@ pub fn Sport(category: String) -> Element {
                                 p { class: "text-zinc-600 dark:text-zinc-400 mb-6",
                                     "{evento.evento_descripcion}"
                                 }
-                                Link { to: Route::Details { id: idx as i32 },
+                                Link { to: Route::Event { id: idx as i32 },
                                     Button { variant: ButtonVariant::Default, "Ver Detalles" }
                                 }
                             }
