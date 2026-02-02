@@ -21,7 +21,7 @@ pub fn Events() -> Element {
       }
   });
   
-  let mut filter_estado = use_signal(|| "Todos".to_string());
+  let mut filter_estado = use_signal(|| "PRÓXIMO".to_string());
   let mut filter_deporte = use_signal(|| "Todos".to_string());
   let mut orden = use_signal(|| "fecha_asc".to_string());
   let mut page = use_signal(|| 1);
@@ -129,10 +129,10 @@ pub fn Events() -> Element {
                   label: "Estado:".to_string(),
                   value: filter_estado,
                   options: vec![
-                      ("Todos".to_string(), "Todos los estados".to_string()),
-                      ("EN VIVO".to_string(), "En Vivo".to_string()),
                       ("PRÓXIMO".to_string(), "Próximos".to_string()),
+                      ("EN VIVO".to_string(), "En Vivo".to_string()),
                       ("FINALIZADO".to_string(), "Finalizados".to_string()),
+                      ("Todos".to_string(), "Todos los estados".to_string()),
                   ],
                   on_change: EventHandler::new(move |val: String| {
                       filter_estado.set(val);
