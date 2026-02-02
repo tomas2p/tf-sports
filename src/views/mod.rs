@@ -18,5 +18,8 @@ pub use events::Events;
 mod sport;
 pub use sport::Sport;
 
+mod sports;
+pub use sports::Sports;
+
 mod navbar;
 pub use navbar::Navbar;

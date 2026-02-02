@@ -30,6 +30,11 @@ pub fn Details(id: i32) -> Element {
             rsx! {
                 Container {
                     Section {
+                        // Imagen del deporte
+                        div { class: "relative h-48 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 rounded-lg mb-8 flex items-center justify-center overflow-hidden",
+                            span { class: "text-9xl", "{evt.get_deporte_emoji()}" }
+                        }
+
                         // Hero Section
                         div { class: "space-y-4",
                             Badge { variant: badge_variant, "{evt.get_badge_variant()}" }

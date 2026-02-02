@@ -27,11 +27,9 @@ pub fn Navbar() -> Element {
                                 "Eventos"
                             }
                             Link {
-                                to: Route::Sport {
-                                    category: "football".to_string(),
-                                },
+                                to: Route::Sports {},
                                 class: "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100",
-                                "Fútbol"
+                                "Deportes"
                             }
                         }
                     }

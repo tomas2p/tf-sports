@@ -2,7 +2,7 @@
 // need dioxus
 use dioxus::prelude::*;
 
-use views::{Details, Events, Home, Navbar, Sport};
+use views::{Details, Events, Home, Navbar, Sport, Sports};
 
 /// Define a components module that contains all shared components for our app.
 mod components;
@@ -34,6 +34,9 @@ enum Route {
         // Events listing page
         #[route("/events")]
         Events {},
+        // Sports overview page
+        #[route("/sports")]
+        Sports {},
         // Dynamic route for sport categories
         #[route("/sport/:category")]
         Sport { category: String },

@@ -11,10 +11,10 @@ pub fn Home() -> Element {
                 // Hero Section
                 div { class: "text-center space-y-6 mb-16",
                     h1 { class: "text-5xl md:text-6xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50",
-                        "Eventos Deportivos en Vivo"
+                        "Agenda Deportiva de Tenerife"
                     }
                     p { class: "text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto",
-                        "Sigue todos tus deportes favoritos en tiempo real. Resultados, estadísticas y calendario completo."
+                        "Descubre todos los eventos deportivos en Tenerife. Competiciones, entrenamientos y actividades para toda la isla."
                     }
                     div { class: "flex gap-4 justify-center mt-8",
                         Link { to: Route::Events {},
@@ -24,10 +24,7 @@ pub fn Home() -> Element {
                                 "Ver Eventos"
                             }
                         }
-                        Link {
-                            to: Route::Sport {
-                                category: "football".to_string(),
-                            },
+                        Link { to: Route::Sports {},
                             Button {
                                 variant: ButtonVariant::Outline,
                                 size: ButtonSize::Lg,
@@ -42,30 +39,26 @@ pub fn Home() -> Element {
                     Link { to: Route::Events {}, class: "no-underline",
                         Card { class: "hover:shadow-md transition-shadow cursor-pointer h-full",
                             CardHeader {
-                                Badge { variant: BadgeVariant::Default, "EN VIVO" }
-                                CardTitle { class: "mt-4", "Eventos Actuales" }
+                                Badge { variant: BadgeVariant::Default, "ACTIVOS" }
+                                CardTitle { class: "mt-4", "Eventos Próximos" }
                             }
                             CardContent {
                                 p { class: "text-zinc-600 dark:text-zinc-400",
-                                    "Sigue los partidos y competiciones en vivo. Resultados en tiempo real y estadísticas actualizadas."
+                                    "Consulta los eventos deportivos programados en toda la isla. Filtra por deporte, estado y municipio."
                                 }
                             }
                         }
                     }
 
-                    Link {
-                        to: Route::Sport {
-                            category: "football".to_string(),
-                        },
-                        class: "no-underline",
+                    Link { to: Route::Sports {}, class: "no-underline",
                         Card { class: "hover:shadow-md transition-shadow cursor-pointer h-full",
                             CardHeader {
-                                Badge { variant: BadgeVariant::Secondary, "POPULAR" }
-                                CardTitle { class: "mt-4", "Ligas y Competiciones" }
+                                Badge { variant: BadgeVariant::Secondary, "14 DEPORTES" }
+                                CardTitle { class: "mt-4", "Categorías Deportivas" }
                             }
                             CardContent {
                                 p { class: "text-zinc-600 dark:text-zinc-400",
-                                    "Explora las mejores ligas del mundo. Premier League, La Liga, Champions League y más."
+                                    "Explora todos los deportes disponibles: ciclismo, natación, voleibol, ajedrez, taekwondo y más."
                                 }
                             }
                         }
@@ -74,12 +67,12 @@ pub fn Home() -> Element {
                     Link { to: Route::Events {}, class: "no-underline",
                         Card { class: "hover:shadow-md transition-shadow cursor-pointer h-full",
                             CardHeader {
-                                Badge { variant: BadgeVariant::Outline, "PRÓXIMO" }
-                                CardTitle { class: "mt-4", "Calendario" }
+                                Badge { variant: BadgeVariant::Outline, "INFORMACIÓN" }
+                                CardTitle { class: "mt-4", "Detalles Completos" }
                             }
                             CardContent {
                                 p { class: "text-zinc-600 dark:text-zinc-400",
-                                    "Revisa los próximos eventos y planifica. No te pierdas ningún partido importante."
+                                    "Encuentra organizadores, ubicaciones, fechas y toda la información necesaria para participar."
                                 }
                             }
                         }

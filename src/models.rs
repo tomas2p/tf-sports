@@ -1,5 +1,32 @@
 use serde::{Deserialize, Serialize};
 
+/// Estructura que representa un tipo de deporte con su nombre y emoji
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeporteInfo {
+    pub nombre: &'static str,
+    pub emoji: &'static str,
+    pub keyword: &'static str,
+}
+
+/// Lista de todos los deportes disponibles
+pub const DEPORTES: &[DeporteInfo] = &[
+    DeporteInfo { nombre: "Ajedrez", emoji: "♟️", keyword: "ajedrez" },
+    DeporteInfo { nombre: "Ciclismo", emoji: "🚴", keyword: "ciclismo" },
+    DeporteInfo { nombre: "Natación", emoji: "🏊", keyword: "natación" },
+    DeporteInfo { nombre: "Voleibol", emoji: "🏐", keyword: "voleibol" },
+    DeporteInfo { nombre: "Taekwondo", emoji: "🥋", keyword: "taekwondo" },
+    DeporteInfo { nombre: "Balonmano", emoji: "🤾", keyword: "balonmano" },
+    DeporteInfo { nombre: "Baloncesto", emoji: "🏀", keyword: "baloncesto" },
+    DeporteInfo { nombre: "Lucha Canaria", emoji: "🤼", keyword: "lucha" },
+    DeporteInfo { nombre: "Bola Canaria", emoji: "🎳", keyword: "bola canaria" },
+    DeporteInfo { nombre: "Salvamento", emoji: "🏊‍♂️", keyword: "salvamento" },
+    DeporteInfo { nombre: "Orientación", emoji: "🧭", keyword: "orientación" },
+    DeporteInfo { nombre: "Tenis de Mesa", emoji: "🏓", keyword: "tenis de mesa" },
+    DeporteInfo { nombre: "Waterpolo", emoji: "🤽", keyword: "waterpolo" },
+    DeporteInfo { nombre: "Bádminton", emoji: "🏸", keyword: "bádminton" },
+    DeporteInfo { nombre: "Béisbol", emoji: "⚾", keyword: "béisbol" },
+];
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EventoData {
     pub eventos: Vec<Evento>,
@@ -49,20 +76,20 @@ impl Evento {
     pub fn get_deporte(&self) -> String {
         let nombre = self.evento_nombre.to_lowercase();
         
-        if nombre.contains("ajedrez") { "Ajedrez".to_string() }
-        else if nombre.contains("ciclismo") { "Ciclismo".to_string() }
-        else if nombre.contains("natación") { "Natación".to_string() }
-        else if nombre.contains("voleibol") { "Voleibol".to_string() }
-        else if nombre.contains("taekwondo") { "Taekwondo".to_string() }
-        else if nombre.contains("balonmano") { "Balonmano".to_string() }
-        else if nombre.contains("baloncesto") { "Baloncesto".to_string() }
-        else if nombre.contains("lucha") { "Lucha Canaria".to_string() }
-        else if nombre.contains("bola canaria") { "Bola Canaria".to_string() }
-        else if nombre.contains("salvamento") { "Salvamento".to_string() }
-        else if nombre.contains("orientación") { "Orientación".to_string() }
-        else if nombre.contains("tenis de mesa") { "Tenis de Mesa".to_string() }
-        else if nombre.contains("waterpolo") { "Waterpolo".to_string() }
-        else if nombre.contains("bádminton") { "Bádminton".to_string() }
-        else { "Varios".to_string() }
+        DEPORTES
+            .iter()
+            .find(|d| nombre.contains(d.keyword))
+            .map(|d| d.nombre.to_string())
+            .unwrap_or_else(|| "Varios".to_string())
+    }
+    
+    pub fn get_deporte_emoji(&self) -> &'static str {
+        let nombre = self.evento_nombre.to_lowercase();
+        
+        DEPORTES
+            .iter()
+            .find(|d| nombre.contains(d.keyword))
+            .map(|d| d.emoji)
+            .unwrap_or("🏆")
     }
 }
