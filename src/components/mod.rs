@@ -9,6 +9,7 @@ pub mod filter_section;
 pub mod empty_state;
 pub mod breadcrumb;
 pub mod pagination;
+pub mod calendar;
 
 pub use event_card::EventCard;
 pub use event_card_with_image::EventCardWithImage;
@@ -17,3 +18,4 @@ pub use filter_section::{FilterSection, FilterConfig};
 pub use empty_state::EmptyState;
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem};
 pub use pagination::Pagination;
+pub use calendar::Calendar;

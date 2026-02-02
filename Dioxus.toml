@@ -3,7 +3,7 @@
 [web.app]
 
 # HTML title tag content
-title = "tf-sports"
+title = "TF Sports"
 
 # include `assets` in web platform
 [web.resource]
