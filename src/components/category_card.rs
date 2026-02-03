@@ -19,24 +19,25 @@ pub struct CategoryCardProps {
 /// A reusable card component for displaying categories with emoji, title, badge and description
 #[component]
 pub fn CategoryCard(props: CategoryCardProps) -> Element {
-    rsx! {
-      Card { class: "hover:shadow-lg transition-all cursor-pointer h-full",
-        if let Some(emoji) = &props.emoji {
-          div { class: "h-32 flex items-center justify-center text-6xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900",
+    let header_visual = props.emoji.as_ref().map(|emoji| rsx! {
+        div { class: "h-32 flex items-center justify-center text-6xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900",
             "{emoji}"
-          }
         }
-        CardHeader {
-          CardTitle { class: "text-center text-xl", "{props.title}" }
-        }
-        CardContent { class: "text-center",
-          Badge { variant: BadgeVariant::Secondary, class: "text-xs", "{props.badge_text}" }
-          if let Some(desc) = &props.description {
-            p { class: "text-sm text-zinc-600 dark:text-zinc-400 mt-3 line-clamp-2",
-              "{desc}"
+    });
+    
+    rsx! {
+        BaseCard { hover_class: "hover:shadow-lg".to_string(), header_visual,
+            CardHeader {
+                CardTitle { class: "text-center text-xl", "{props.title}" }
             }
-          }
+            CardContent { class: "text-center",
+                Badge { variant: BadgeVariant::Secondary, class: "text-xs", "{props.badge_text}" }
+                if let Some(desc) = &props.description {
+                    p { class: "text-sm text-zinc-600 dark:text-zinc-400 mt-3 line-clamp-2",
+                        "{desc}"
+                    }
+                }
+            }
         }
-      }
     }
 }

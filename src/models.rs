@@ -36,6 +36,7 @@ pub const DEPORTES: &[DeporteInfo] = &[
     DeporteInfo { nombre: "Waterpolo", emoji: "🤽", keyword: "waterpolo" },
     DeporteInfo { nombre: "Ajedrez", emoji: "♟️", keyword: "ajedrez" },
     DeporteInfo { nombre: "Béisbol", emoji: "⚾", keyword: "béisbol" },
+    DeporteInfo { nombre: "Fútbol", emoji: "⚽", keyword: "fútbol" },
     DeporteInfo { nombre: "Kayak", emoji: "🛶", keyword: "kayak" },
     DeporteInfo { nombre: "Rugby", emoji: "🏉", keyword: "rugby" },
     DeporteInfo { nombre: "Surf", emoji: "🏄", keyword: "surf" },

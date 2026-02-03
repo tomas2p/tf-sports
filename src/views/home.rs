@@ -1,7 +1,9 @@
 use crate::Route;
 use crate::components::ui::*;
-use crate::components::{Calendar, EventCardWithImage, EmptyState, calendar::fecha_en_espanol};
+use crate::components::{Calendar, EventCard, EmptyState};
+use crate::components::event_card::LayoutVariant;
 use crate::models::{EventoData, Evento};
+use crate::utils::date_utils::fecha_en_espanol;
 use dioxus::prelude::*;
 use chrono::Datelike;
 
@@ -131,10 +133,11 @@ pub fn Home() -> Element {
                                     }
                                 } else {
                                     for (idx , evento) in eventos_del_dia {
-                                        EventCardWithImage {
+                                        EventCard {
                                             key: "{idx}",
                                             evento: evento.clone(),
                                             index: idx as i32,
+                                            layout: LayoutVariant::Detailed,
                                         }
                                     }
                                 }

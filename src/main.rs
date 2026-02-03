@@ -6,14 +6,16 @@ use views::{Event, Events, Home, Navbar, Place, Places, Sport, Sports};
 
 /// Define a components module that contains all shared components for our app.
 mod components;
-/// Define a views module that contains the UI for all Layouts and Routes for our app.
-mod views;
 /// Define a models module that contains data structures.
 mod models;
-/// Define a theme module that contains theme management.
-mod theme;
 /// Define a styles module that contains CSS class constants.
 mod styles;
+/// Define a theme module that contains theme management.
+mod theme;
+/// Define a utils module that contains utility functions.
+mod utils;
+/// Define a views module that contains the UI for all Layouts and Routes for our app.
+mod views;
 
 /// The Route enum is used to define the structure of internal routes in our app. All route enums need to derive
 /// the [`Routable`] trait, which provides the necessary methods for the router to work.
@@ -73,9 +75,9 @@ fn App() -> Element {
         t.apply();
         t
     });
-    
+
     use_context_provider(|| theme);
-    
+
     // The `rsx!` macro lets us define HTML inside of rust. It expands to an Element with all of our HTML inside.
     rsx! {
         // Script para aplicar tema antes del render

@@ -1,37 +1,8 @@
 use crate::components::ui::*;
 use crate::models::Evento;
+use crate::utils::date_utils::{day_name_short_es};
 use dioxus::prelude::*;
 use chrono::{NaiveDate, Datelike, Duration};
-
-pub fn fecha_en_espanol(date: NaiveDate) -> String {
-    let dia_semana = match date.weekday() {
-        chrono::Weekday::Mon => "lunes",
-        chrono::Weekday::Tue => "martes",
-        chrono::Weekday::Wed => "miércoles",
-        chrono::Weekday::Thu => "jueves",
-        chrono::Weekday::Fri => "viernes",
-        chrono::Weekday::Sat => "sábado",
-        chrono::Weekday::Sun => "domingo",
-    };
-    
-    let mes = match date.month() {
-        1 => "enero",
-        2 => "febrero",
-        3 => "marzo",
-        4 => "abril",
-        5 => "mayo",
-        6 => "junio",
-        7 => "julio",
-        8 => "agosto",
-        9 => "septiembre",
-        10 => "octubre",
-        11 => "noviembre",
-        12 => "diciembre",
-        _ => "",
-    };
-    
-    format!("{} {} de {}", dia_semana, date.day(), mes)
-}
 
 /// Componente de calendario semanal compacto
 #[component]
@@ -131,15 +102,7 @@ pub fn Calendar(
                             let eventos_count = eventos_por_fecha().get(date).copied().unwrap_or(0);
                             let date_clone = *date;
 
-                            let day_name = match date.weekday() {
-                                chrono::Weekday::Mon => "Lun",
-                                chrono::Weekday::Tue => "Mar",
-                                chrono::Weekday::Wed => "Mié",
-                                chrono::Weekday::Thu => "Jue",
-                                chrono::Weekday::Fri => "Vie",
-                                chrono::Weekday::Sat => "Sáb",
-                                chrono::Weekday::Sun => "Dom",
-                            };
+                            let day_name = day_name_short_es(date.weekday());
 
                             rsx! {
                                 button {

@@ -1,6 +1,7 @@
 use crate::Route;
 use crate::components::ui::*;
 use crate::components::{EventCard, PageHeader, EmptyState, Breadcrumb, BreadcrumbItem, Pagination, FilterSection, FilterConfig};
+use crate::components::event_card::LayoutVariant;
 use crate::models::{EventoData, DEPORTES};
 use dioxus::prelude::*;
 
@@ -314,7 +315,11 @@ pub fn Sport(category: String) -> Element {
                 // Grid de eventos
                 div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-3",
                     for (idx , evento) in eventos_paginados() {
-                        EventCard { evento, index: idx as i32 }
+                        EventCard {
+                            evento,
+                            index: idx as i32,
+                            layout: LayoutVariant::Simple,
+                        }
                     }
                 }
 
