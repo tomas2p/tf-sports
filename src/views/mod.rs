@@ -21,5 +21,11 @@ pub use sport::Sport;
 mod sports;
 pub use sports::Sports;
 
+mod places;
+pub use places::Places;
+
+mod place;
+pub use place::Place;
+
 mod navbar;
 pub use navbar::Navbar;

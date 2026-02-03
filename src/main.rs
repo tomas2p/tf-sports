@@ -2,7 +2,7 @@
 // need dioxus
 use dioxus::prelude::*;
 
-use views::{Event, Events, Home, Navbar, Sport, Sports};
+use views::{Event, Events, Home, Navbar, Place, Places, Sport, Sports};
 
 /// Define a components module that contains all shared components for our app.
 mod components;
@@ -39,6 +39,12 @@ enum Route {
         // Sports overview page
         #[route("/sports")]
         Sports {},
+        // Places page
+        #[route("/places")]
+        Places {},
+        // Dynamic route for place details
+        #[route("/place/:id")]
+        Place { id: i64 },
         // Dynamic route for sport categories
         #[route("/sport/:category")]
         Sport { category: String },
@@ -49,7 +55,6 @@ enum Route {
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 // The asset macro also minifies some assets like CSS and JS to make bundles smaller
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
-const EVENTOS_JSON: Asset = asset!("/data/agenda-de-eventos-deportivos-en-tenerife.json");
 
 fn main() {
     // The `launch` function is the main entry point for a dioxus app. It takes a component and renders it with the platform feature
@@ -63,7 +68,7 @@ fn main() {
 /// Components should be annotated with `#[component]` to support props, better error messages, and autocomplete
 #[component]
 fn App() -> Element {
-    let mut theme = use_signal(|| {
+    let theme = use_signal(|| {
         let t = theme::Theme::from_storage();
         t.apply();
         t

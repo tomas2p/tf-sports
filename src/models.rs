@@ -115,3 +115,58 @@ impl Evento {
             .unwrap_or("🏆")
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EspacioDeportivo {
+    pub instalacion_codigo: i64,
+    pub espacio_codigo: i64,
+    pub espacio_nombre: String,
+    pub espacio_tipo: Option<String>,
+    pub espacio_clase: Option<String>,
+    pub espacio_actividad_principal: Option<String>,
+    pub pavimento_tipo: Option<String>,
+    pub pavimento_conservacion: Option<String>,
+    pub espacio_cerramiento: Option<String>,
+    pub espacio_estado_uso: Option<String>,
+    pub espacio_calefaccion: Option<String>,
+    pub espacio_climatizacion: Option<String>,
+    pub espacio_iluminacion: Option<String>,
+    pub ultima_modificacion: String,
+}
+
+// Modelo para instalaciones deportivas (GeoJSON)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InstalacionesGeoJSON {
+    pub features: Vec<InstalacionFeature>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InstalacionFeature {
+    pub properties: InstalacionDeportiva,
+    pub geometry: Geometry,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InstalacionDeportiva {
+    pub instalacion_codigo: i64,
+    pub instalacion_nombre: String,
+    pub municipio_nombre: String,
+    pub codigo_postal: Option<String>,
+    pub email: Option<String>,
+    pub telefono_fijo: Option<String>,
+    pub web: Option<String>,
+    pub fax: Option<String>,
+    pub propiedad: Option<String>,
+    pub tipo_gestion: Option<String>,
+    pub observaciones: Option<String>,
+    pub longitud: f64,
+    pub latitud: f64,
+    pub ultima_modificacion: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Geometry {
+    #[serde(rename = "type")]
+    pub geom_type: String,
+    pub coordinates: Vec<f64>,
+}

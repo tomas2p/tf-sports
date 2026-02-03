@@ -20,11 +20,11 @@ pub fn Home() -> Element {
         }
     });
     
-    let mut selected_date = use_signal(|| None::<chrono::NaiveDate>);
+    let selected_date = use_signal(|| None::<chrono::NaiveDate>);
     let today = chrono::Local::now().date_naive();
     let days_from_monday = today.weekday().num_days_from_monday();
     let monday = today - chrono::Duration::days(days_from_monday as i64);
-    let mut current_week_start = use_signal(move || monday);
+    let current_week_start = use_signal(move || monday);
     
     let eventos_filtrados = use_memo(move || {
         let data = eventos_data();
@@ -81,7 +81,7 @@ pub fn Home() -> Element {
                     p { class: "text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto",
                         "Descubre todos los eventos deportivos en Tenerife. Competiciones, entrenamientos y actividades para toda la isla."
                     }
-                    div { class: "flex gap-4 justify-center mt-8",
+                    div { class: "flex gap-4 justify-center mt-8 flex-wrap",
                         Link { to: Route::Events {},
                             Button {
                                 variant: ButtonVariant::Default,
@@ -94,6 +94,13 @@ pub fn Home() -> Element {
                                 variant: ButtonVariant::Outline,
                                 size: ButtonSize::Lg,
                                 "Explorar Deportes"
+                            }
+                        }
+                        Link { to: Route::Places {},
+                            Button {
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Lg,
+                                "Ver Lugares"
                             }
                         }
                     }

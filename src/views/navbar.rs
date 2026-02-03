@@ -31,6 +31,11 @@ pub fn Navbar() -> Element {
                                 class: "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100",
                                 "Deportes"
                             }
+                            Link {
+                                to: Route::Places {},
+                                class: "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100",
+                                "Instalaciones"
+                            }
                         }
                     }
 
@@ -56,6 +61,6 @@ pub fn Navbar() -> Element {
         }
 
         // The `Outlet` component is used to render the next component inside the layout.
-        Outlet::<Route> {}
+        div { class: "min-h-screen bg-white dark:bg-zinc-950", Outlet::<Route> {} }
     }
 }

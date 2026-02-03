@@ -1,4 +1,3 @@
-use crate::components::ui::*;
 use dioxus::prelude::*;
 
 /// Componente reutilizable para estados vacíos

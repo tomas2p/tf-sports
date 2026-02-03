@@ -1,4 +1,3 @@
-use crate::Route;
 use crate::components::ui::*;
 use crate::components::{PageHeader, EmptyState, EventCardWithImage, Pagination, FilterSection, FilterConfig};
 use crate::models::{EventoData, Evento};
@@ -97,91 +96,91 @@ pub fn Events() -> Element {
   
   rsx! {
     Container {
-      Section {
-        // Header
-        PageHeader {
-          title: "Eventos Deportivos en Tenerife".to_string(),
-          description: Some(
-              format!(
-                  "Mostrando {} de {} eventos",
-                  eventos_paginados().len(),
-                  eventos_filtrados().len(),
-              ),
-          ),
-        }
-
-        // Filtros
-        FilterSection {
-          filters: vec![
-              FilterConfig {
-                  label: "Ordenar por:".to_string(),
-                  value: orden,
-                  options: vec![
-                      ("fecha_asc".to_string(), "Fecha (próximos primero)".to_string()),
-                      ("fecha_desc".to_string(), "Fecha (lejanos primero)".to_string()),
-                      ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
-                      ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
-                      ("deporte".to_string(), "Deporte".to_string()),
-                  ],
-                  on_change: EventHandler::new(move |val: String| orden.set(val)),
-              },
-              FilterConfig {
-                  label: "Estado:".to_string(),
-                  value: filter_estado,
-                  options: vec![
-                      ("PRÓXIMO".to_string(), "Próximos".to_string()),
-                      ("EN VIVO".to_string(), "En Vivo".to_string()),
-                      ("FINALIZADO".to_string(), "Finalizados".to_string()),
-                      ("Todos".to_string(), "Todos los estados".to_string()),
-                  ],
-                  on_change: EventHandler::new(move |val: String| {
-                      filter_estado.set(val);
-                      page.set(1);
-                  }),
-              },
-              FilterConfig {
-                  label: "Deporte:".to_string(),
-                  value: filter_deporte,
-                  options: {
-                      let mut opts = vec![
-                          ("Todos".to_string(), "Todos los deportes".to_string()),
-                      ];
-                      for deporte in deportes_disponibles() {
-                          opts.push((deporte.clone(), deporte));
-                      }
-                      opts
-                  },
-                  on_change: EventHandler::new(move |val: String| {
-                      filter_deporte.set(val);
-                      page.set(1);
-                  }),
-              },
-          ],
-        }
-
-        // Grid de eventos
-        div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
-          if eventos_paginados().is_empty() {
-            div { class: "col-span-full",
-              EmptyState {
-                emoji: "🏆".to_string(),
-                title: "No hay eventos disponibles".to_string(),
-                message: "No se encontraron eventos con los filtros seleccionados.".to_string(),
-              }
+        Section {
+            // Header
+            PageHeader {
+                title: "Eventos Deportivos en Tenerife".to_string(),
+                description: Some(
+                    format!(
+                        "Mostrando {} de {} eventos",
+                        eventos_paginados().len(),
+                        eventos_filtrados().len(),
+                    ),
+                ),
             }
-          }
-          for (original_idx , evento) in eventos_paginados().iter() {
-            EventCardWithImage {
-              key: "{original_idx}",
-              evento: evento.clone(),
-              index: *original_idx as i32,
-            }
-          }
-        }
 
-        // Paginación
-        Pagination { current_page: page, total_pages: total_pages() }
-      }
+            // Filtros
+            FilterSection {
+                filters: vec![
+                    FilterConfig {
+                        label: "Ordenar por:".to_string(),
+                        value: orden,
+                        options: vec![
+                            ("fecha_asc".to_string(), "Fecha (próximos primero)".to_string()),
+                            ("fecha_desc".to_string(), "Fecha (lejanos primero)".to_string()),
+                            ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
+                            ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
+                            ("deporte".to_string(), "Deporte".to_string()),
+                        ],
+                        on_change: EventHandler::new(move |val: String| orden.set(val)),
+                    },
+                    FilterConfig {
+                        label: "Estado:".to_string(),
+                        value: filter_estado,
+                        options: vec![
+                            ("PRÓXIMO".to_string(), "Próximos".to_string()),
+                            ("EN VIVO".to_string(), "En Vivo".to_string()),
+                            ("FINALIZADO".to_string(), "Finalizados".to_string()),
+                            ("Todos".to_string(), "Todos los estados".to_string()),
+                        ],
+                        on_change: EventHandler::new(move |val: String| {
+                            filter_estado.set(val);
+                            page.set(1);
+                        }),
+                    },
+                    FilterConfig {
+                        label: "Deporte:".to_string(),
+                        value: filter_deporte,
+                        options: {
+                            let mut opts = vec![
+                                ("Todos".to_string(), "Todos los deportes".to_string()),
+                            ];
+                            for deporte in deportes_disponibles() {
+                                opts.push((deporte.clone(), deporte));
+                            }
+                            opts
+                        },
+                        on_change: EventHandler::new(move |val: String| {
+                            filter_deporte.set(val);
+                            page.set(1);
+                        }),
+                    },
+                ],
+            }
+
+            // Grid de eventos
+            div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
+                if eventos_paginados().is_empty() {
+                    div { class: "col-span-full",
+                        EmptyState {
+                            emoji: "🏆".to_string(),
+                            title: "No hay eventos disponibles".to_string(),
+                            message: "No se encontraron eventos con los filtros seleccionados.".to_string(),
+                        }
+                    }
+                }
+                for (original_idx , evento) in eventos_paginados().iter() {
+                    EventCardWithImage {
+                        key: "{original_idx}",
+                        evento: evento.clone(),
+                        index: *original_idx as i32,
+                    }
+                }
+            }
+
+            // Paginación
+            Pagination { current_page: page, total_pages: total_pages() }
+        }
     }
-  }
+}
 }

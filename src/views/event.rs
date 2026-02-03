@@ -1,6 +1,6 @@
 use crate::Route;
 use crate::components::ui::*;
-use crate::models::{EventoData, Evento};
+use crate::models::{EventoData};
 use dioxus::prelude::*;
 
 const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
