@@ -4,6 +4,7 @@ use crate::components::{
     EmptyState, EventCard, FilterConfig, FilterSection, PageHeader, Pagination,
 };
 use crate::models::{Evento, EventoData};
+use crate::utils::pagination_filters::{paginate, total_pages};
 use dioxus::prelude::*;
 
 const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
@@ -87,15 +88,12 @@ pub fn Events() -> Element {
 
     let eventos_paginados = use_memo(move || {
         let eventos = eventos_filtrados();
-        let current_page = page();
-        let start = ((current_page - 1) * items_per_page) as usize;
-        let end = (start + items_per_page as usize).min(eventos.len());
-        eventos[start..end].to_vec()
+        paginate(&eventos, page() as usize, items_per_page)
     });
 
     let total_pages = use_memo(move || {
         let total = eventos_filtrados().len();
-        ((total as f64) / (items_per_page as f64)).ceil() as usize
+        total_pages(total, items_per_page)
     });
 
     rsx! {

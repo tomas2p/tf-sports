@@ -1,8 +1,12 @@
-use crate::Route;
-use crate::components::ui::*;
-use crate::components::{EventCard, PageHeader, EmptyState, Breadcrumb, BreadcrumbItem, Pagination, FilterSection, FilterConfig};
 use crate::components::event_card::LayoutVariant;
+use crate::components::ui::*;
+use crate::components::{
+    Breadcrumb, BreadcrumbItem, EmptyState, EventCard, FilterConfig, FilterSection, PageHeader,
+    Pagination,
+};
 use crate::models::{EventoData, DEPORTES};
+use crate::utils::pagination_filters::{paginate, total_pages};
+use crate::Route;
 use dioxus::prelude::*;
 
 const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
@@ -10,42 +14,45 @@ const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos
 #[component]
 pub fn Sport(category: String) -> Element {
     // Cargar eventos desde JSON
-    let eventos_data = use_memo(move || {
-        match serde_json::from_str::<EventoData>(EVENTOS_JSON) {
+    let eventos_data = use_memo(
+        move || match serde_json::from_str::<EventoData>(EVENTOS_JSON) {
             Ok(data) => data,
-            Err(_) => EventoData { eventos: vec![] }
-        }
-    });
-    
+            Err(_) => EventoData { eventos: vec![] },
+        },
+    );
+
     // Clonar category para usarlo en múltiples closures
     let category_clone1 = category.clone();
     let category_clone2 = category.clone();
-    
+
     // Buscar información del deporte
     let deporte_info = use_memo(move || {
-        DEPORTES.iter()
+        DEPORTES
+            .iter()
             .find(|d| d.nombre == category_clone1)
             .cloned()
     });
-    
+
     // Signals para filtros y paginación
     let mut filter_organizador = use_signal(|| "Todos".to_string());
     let mut filter_municipio = use_signal(|| "Todos".to_string());
     let mut orden = use_signal(|| "fecha_asc".to_string());
     let mut page = use_signal(|| 1);
     let items_per_page = 6; // Una fila de 6 eventos
-    
+
     // Clonar category para filtros
     let category_clone3 = category.clone();
     let category_clone4 = category.clone();
-    
+
     // Obtener listas únicas para filtros (solo de eventos de este deporte)
     let organizadores_disponibles = use_memo(move || {
         let data = eventos_data();
         let info = deporte_info();
         let deporte_actual = category_clone3.clone();
-        
-        let mut orgs: Vec<String> = data.eventos.iter()
+
+        let mut orgs: Vec<String> = data
+            .eventos
+            .iter()
             .filter(|e| {
                 // Filtrar solo eventos de este deporte
                 if let Some(ref info) = info {
@@ -62,13 +69,15 @@ pub fn Sport(category: String) -> Element {
         orgs.dedup();
         orgs
     });
-    
+
     let municipios_disponibles = use_memo(move || {
         let data = eventos_data();
         let info = deporte_info();
         let deporte_actual = category_clone4.clone();
-        
-        let mut munis: Vec<String> = data.eventos.iter()
+
+        let mut munis: Vec<String> = data
+            .eventos
+            .iter()
             .filter(|e| {
                 // Filtrar solo eventos de este deporte
                 if let Some(ref info) = info {
@@ -85,7 +94,7 @@ pub fn Sport(category: String) -> Element {
         munis.dedup();
         munis
     });
-    
+
     // Filtrar y ordenar eventos
     let eventos_filtrados = use_memo(move || {
         let data = eventos_data();
@@ -94,8 +103,10 @@ pub fn Sport(category: String) -> Element {
         let org_val = filter_organizador();
         let muni_val = filter_municipio();
         let orden_val = orden();
-        
-        let mut filtered: Vec<(usize, crate::models::Evento)> = data.eventos.into_iter()
+
+        let mut filtered: Vec<(usize, crate::models::Evento)> = data
+            .eventos
+            .into_iter()
             .enumerate()
             .filter(|(_, e)| {
                 // Filtro por deporte (usando el keyword del deporte)
@@ -106,59 +117,56 @@ pub fn Sport(category: String) -> Element {
                 } else {
                     e.get_deporte() == deporte_actual
                 };
-                
+
                 // Filtro por organizador
                 let org_match = if org_val == "Todos" {
                     true
                 } else {
                     e.evento_organizador == org_val
                 };
-                
+
                 // Filtro por municipio
                 let muni_match = if muni_val == "Todos" {
                     true
                 } else {
                     e.municipio_nombre.as_ref() == Some(&muni_val)
                 };
-                
+
                 deporte_match && org_match && muni_match
             })
             .collect();
-        
+
         // Ordenar
         match orden_val.as_str() {
-            "fecha_asc" => filtered.sort_by(|a, b| 
-                a.1.evento_fecha_inicio.cmp(&b.1.evento_fecha_inicio)),
-            "fecha_desc" => filtered.sort_by(|a, b| 
-                b.1.evento_fecha_inicio.cmp(&a.1.evento_fecha_inicio)),
-            "nombre_az" => filtered.sort_by(|a, b| 
-                a.1.evento_nombre.cmp(&b.1.evento_nombre)),
-            "nombre_za" => filtered.sort_by(|a, b| 
-                b.1.evento_nombre.cmp(&a.1.evento_nombre)),
-            "organizador" => filtered.sort_by(|a, b| 
-                a.1.evento_organizador.cmp(&b.1.evento_organizador)),
-            "municipio" => filtered.sort_by(|a, b| 
-                a.1.municipio_nombre.cmp(&b.1.municipio_nombre)),
+            "fecha_asc" => {
+                filtered.sort_by(|a, b| a.1.evento_fecha_inicio.cmp(&b.1.evento_fecha_inicio))
+            }
+            "fecha_desc" => {
+                filtered.sort_by(|a, b| b.1.evento_fecha_inicio.cmp(&a.1.evento_fecha_inicio))
+            }
+            "nombre_az" => filtered.sort_by(|a, b| a.1.evento_nombre.cmp(&b.1.evento_nombre)),
+            "nombre_za" => filtered.sort_by(|a, b| b.1.evento_nombre.cmp(&a.1.evento_nombre)),
+            "organizador" => {
+                filtered.sort_by(|a, b| a.1.evento_organizador.cmp(&b.1.evento_organizador))
+            }
+            "municipio" => filtered.sort_by(|a, b| a.1.municipio_nombre.cmp(&b.1.municipio_nombre)),
             _ => {}
         }
-        
+
         filtered
     });
-    
+
     // Paginación
     let eventos_paginados = use_memo(move || {
         let eventos = eventos_filtrados();
-        let current_page = page();
-        let start = ((current_page - 1) * items_per_page) as usize;
-        let end = (start + items_per_page as usize).min(eventos.len());
-        eventos[start..end].to_vec()
+        paginate(&eventos, page() as usize, items_per_page)
     });
-    
+
     let total_pages = use_memo(move || {
         let total = eventos_filtrados().len();
-        ((total as f64) / (items_per_page as f64)).ceil() as usize
+        total_pages(total, items_per_page)
     });
-    
+
     // Si no hay eventos, mostrar estado vacío
     if eventos_filtrados().is_empty() {
         return rsx! {
@@ -178,16 +186,19 @@ pub fn Sport(category: String) -> Element {
             }
         };
     }
-    
+
     // Buscar el evento más próximo (que no haya finalizado)
     let evento_destacado = use_memo(move || {
         let eventos = eventos_filtrados();
         let now = chrono::Local::now().naive_local();
-        
-        eventos.into_iter()
+
+        eventos
+            .into_iter()
             .filter(|(_, e)| {
                 // Filtrar eventos que no han finalizado
-                if let Ok(fecha_fin) = chrono::NaiveDateTime::parse_from_str(&e.evento_fecha_fin, "%Y-%m-%d %H:%M:%S") {
+                if let Ok(fecha_fin) =
+                    chrono::NaiveDateTime::parse_from_str(&e.evento_fecha_fin, "%Y-%m-%d %H:%M:%S")
+                {
                     fecha_fin >= now
                 } else {
                     true
@@ -198,7 +209,7 @@ pub fn Sport(category: String) -> Element {
                 e.evento_fecha_inicio.clone()
             })
     });
-    
+
     rsx! {
         Container {
             Section {

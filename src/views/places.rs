@@ -1,5 +1,6 @@
 use crate::components::ui::*;
 use crate::components::{EmptyState, PageHeader, Pagination, FilterSection, FilterConfig, CategoryCard};
+use crate::utils::pagination_filters::{paginate, total_pages};
 use crate::models::{EspacioDeportivo, InstalacionesGeoJSON};
 use crate::Route;
 use dioxus::prelude::*;
@@ -127,7 +128,7 @@ pub fn Places() -> Element {
     
     // Calcular paginación
     let total_items = instalaciones_filtradas().len();
-    let total_pages = (total_items + items_per_page - 1) / items_per_page;
+    let total_pages = total_pages(total_items, items_per_page);
     
     // Resetear página cuando cambian los filtros
     use_effect(move || {
@@ -140,9 +141,7 @@ pub fn Places() -> Element {
     // Obtener instalaciones de la página actual
     let instalaciones_paginadas = use_memo(move || {
         let filtered = instalaciones_filtradas();
-        let page = current_page();
-        let start = (page - 1) * items_per_page;
-        filtered.into_iter().skip(start).take(items_per_page).collect::<Vec<_>>()
+        paginate(&filtered, current_page() as usize, items_per_page)
     });
     
     rsx! {
