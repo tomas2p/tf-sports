@@ -1,47 +1,40 @@
-use crate::components::event_card::LayoutVariant;
-use crate::components::ui::*;
-use crate::components::{
-    breadcrumb_items, Breadcrumb, EmptyState, EventCard, FilterConfig, FilterSection, PageHeader,
-    PaginatedListing, Pagination,
+use crate::components::{breadcrumb_items, Breadcrumb, FilterSpec, PaginatedListing, SearchBar};
+use crate::data::get_eventos;
+use crate::filters;
+use crate::models::Evento;
+use crate::utils::listing_helpers::unique_sorted;
+use crate::utils::pagination_filters::{
+    paginate, total_pages, use_page_reset, DEFAULT_ITEMS_PER_PAGE,
 };
-use crate::models::{Evento, EventoData};
-use crate::utils::pagination_filters::{paginate, total_pages};
 use crate::Route;
 use dioxus::prelude::*;
 
-const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
-
 #[component]
 pub fn Events() -> Element {
-    // Cargar eventos desde JSON
-    let eventos_data = use_memo(
-        move || match serde_json::from_str::<EventoData>(EVENTOS_JSON) {
-            Ok(data) => {
-                web_sys::console::log_1(
-                    &format!("Eventos cargados: {}", data.eventos.len()).into(),
-                );
-                data
-            }
-            Err(e) => {
-                web_sys::console::log_1(&format!("Error parsing JSON: {:?}", e).into());
-                EventoData { eventos: vec![] }
-            }
-        },
-    );
+    // Cargar eventos desde JSON (cacheados)
+    let eventos_data = use_memo(move || get_eventos().clone());
 
-    let mut filter_estado = use_signal(|| "PRÓXIMO".to_string());
-    let mut filter_deporte = use_signal(|| "Todos".to_string());
-    let mut orden = use_signal(|| "fecha_asc".to_string());
-    let mut page = use_signal(|| 1);
-    let items_per_page = 12;
+    // Signals para filtros y paginación
+    let filter_estado = use_signal(|| "PRÓXIMO".to_string());
+    let filter_deporte = use_signal(|| "Todos".to_string());
+    let orden = use_signal(|| "fecha_asc".to_string());
+    let page = use_signal(|| 1);
+    let search_query = use_signal(|| String::new());
+    let items_per_page = DEFAULT_ITEMS_PER_PAGE;
+
+    // Resetear página cuando cambian los filtros
+    use_page_reset(page, move || {
+        filter_estado();
+        filter_deporte();
+        orden();
+        search_query();
+    });
 
     // Obtener lista de deportes únicos
     let deportes_disponibles = use_memo(move || {
         let data = eventos_data();
-        let mut deportes: Vec<String> = data.eventos.iter().map(|e| e.get_deporte()).collect();
-        deportes.sort();
-        deportes.dedup();
-        deportes
+        let deportes: Vec<String> = data.eventos.iter().map(|e| e.get_deporte()).collect();
+        unique_sorted(deportes)
     });
 
     // Filtrar eventos según los filtros seleccionados
@@ -50,12 +43,12 @@ pub fn Events() -> Element {
         let estado_val = filter_estado();
         let deporte_val = filter_deporte();
         let orden_val = orden();
+        let query = search_query().to_lowercase();
 
-        let mut filtered: Vec<(usize, Evento)> = data
+        let mut filtered: Vec<Evento> = data
             .eventos
             .into_iter()
-            .enumerate()
-            .filter(|(_, e)| {
+            .filter(|e| {
                 let estado_match = if estado_val == "Todos" {
                     true
                 } else {
@@ -68,21 +61,41 @@ pub fn Events() -> Element {
                     e.get_deporte() == deporte_val
                 };
 
-                estado_match && deporte_match
+                let search_match = if query.is_empty() {
+                    true
+                } else {
+                    let nombre = e.evento_nombre.to_lowercase();
+                    let desc = e.evento_descripcion.to_lowercase();
+                    let lugar = e.evento_lugar.clone().unwrap_or_default().to_lowercase();
+                    let municipio = e
+                        .municipio_nombre
+                        .clone()
+                        .unwrap_or_default()
+                        .to_lowercase();
+                    let organizador = e.evento_organizador.to_lowercase();
+
+                    nombre.contains(&query)
+                        || desc.contains(&query)
+                        || lugar.contains(&query)
+                        || municipio.contains(&query)
+                        || organizador.contains(&query)
+                };
+
+                estado_match && deporte_match && search_match
             })
             .collect();
 
         // Ordenar
         match orden_val.as_str() {
             "fecha_asc" => {
-                filtered.sort_by(|a, b| a.1.evento_fecha_inicio.cmp(&b.1.evento_fecha_inicio))
+                filtered.sort_by(|a, b| a.evento_fecha_inicio.cmp(&b.evento_fecha_inicio))
             }
             "fecha_desc" => {
-                filtered.sort_by(|a, b| b.1.evento_fecha_inicio.cmp(&a.1.evento_fecha_inicio))
+                filtered.sort_by(|a, b| b.evento_fecha_inicio.cmp(&a.evento_fecha_inicio))
             }
-            "nombre_az" => filtered.sort_by(|a, b| a.1.evento_nombre.cmp(&b.1.evento_nombre)),
-            "nombre_za" => filtered.sort_by(|a, b| b.1.evento_nombre.cmp(&a.1.evento_nombre)),
-            "deporte" => filtered.sort_by(|a, b| a.1.get_deporte().cmp(&b.1.get_deporte())),
+            "nombre_az" => filtered.sort_by(|a, b| a.evento_nombre.cmp(&b.evento_nombre)),
+            "nombre_za" => filtered.sort_by(|a, b| b.evento_nombre.cmp(&a.evento_nombre)),
+            "deporte" => filtered.sort_by(|a, b| a.get_deporte().cmp(&b.get_deporte())),
             _ => {}
         }
 
@@ -102,60 +115,9 @@ pub fn Events() -> Element {
         total_pages(total, items_per_page)
     });
 
-    // Configurar filtros
-    let filters = vec![
-        FilterConfig {
-            label: "Ordenar por:".to_string(),
-            value: orden,
-            options: vec![
-                (
-                    "fecha_asc".to_string(),
-                    "Fecha (próximos primero)".to_string(),
-                ),
-                (
-                    "fecha_desc".to_string(),
-                    "Fecha (lejanos primero)".to_string(),
-                ),
-                ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
-                ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
-                ("deporte".to_string(), "Deporte".to_string()),
-            ],
-            on_change: EventHandler::new(move |val: String| orden.set(val)),
-        },
-        FilterConfig {
-            label: "Estado:".to_string(),
-            value: filter_estado,
-            options: vec![
-                ("PRÓXIMO".to_string(), "Próximos".to_string()),
-                ("EN VIVO".to_string(), "En Vivo".to_string()),
-                ("FINALIZADO".to_string(), "Finalizados".to_string()),
-                ("Todos".to_string(), "Todos los estados".to_string()),
-            ],
-            on_change: EventHandler::new(move |val: String| {
-                filter_estado.set(val);
-                page.set(1);
-            }),
-        },
-        FilterConfig {
-            label: "Deporte:".to_string(),
-            value: filter_deporte,
-            options: {
-                let mut opts = vec![("Todos".to_string(), "Todos los deportes".to_string())];
-                for deporte in deportes_disponibles() {
-                    opts.push((deporte.clone(), deporte));
-                }
-                opts
-            },
-            on_change: EventHandler::new(move |val: String| {
-                filter_deporte.set(val);
-                page.set(1);
-            }),
-        },
-    ];
-
     rsx! {
         PaginatedListing {
-            title: Some("Eventos Deportivos en Tenerife".to_string()),
+            title: Some("Eventos Deportivos".to_string()),
             breadcrumb: Some(rsx! {
                 Breadcrumb { items: breadcrumb_items!(("Inicio", Route::Home {}), ("Eventos", Route::Events {})) }
             }),
@@ -166,15 +128,22 @@ pub fn Events() -> Element {
                     eventos_filtrados().len(),
                 ),
             ),
-            featured: None,
-            filters,
+            filters: filters!(
+                FilterSpec::Orden(orden, Some(vec![
+                    ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
+                ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
+                ("fecha_asc".to_string(), "Fecha (próximos primero)".to_string()),
+                ("fecha_desc".to_string(), "Fecha (lejanos primero)".to_string())
+                ])),
+                FilterSpec::Estado(filter_estado, None),
+                FilterSpec::Deporte(filter_deporte,                None, Some(deportes_disponibles())),
+            ),
+            search_bar: Some(rsx! { SearchBar { value: search_query, placeholder: "Buscar eventos...".to_string() } }),
+            grid_classes: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
             paginated_items: eventos_paginados,
             current_page: page,
             total_pages: total_pages(),
-            items_per_page,
-            item_layout: Some(LayoutVariant::Detailed),
             show_empty_state: true,
-        
         }
     }
 }

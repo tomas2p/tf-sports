@@ -5,6 +5,7 @@ mod section;
 mod badge;
 mod separator;
 mod select;
+mod search_bar;
 
 pub use button::*;
 pub use card::*;
@@ -13,3 +14,4 @@ pub use section::*;
 pub use badge::*;
 pub use separator::*;
 pub use select::*;
+pub use search_bar::SearchBar;

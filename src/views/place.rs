@@ -1,29 +1,16 @@
 use crate::components::ui::*;
-use crate::models::{EspacioDeportivo, InstalacionesGeoJSON};
+use crate::models::EspacioDeportivo;
+use crate::data::{get_instalaciones, get_espacios};
 use dioxus::prelude::*;
 use std::collections::HashMap;
 
-const INSTALACIONES_JSON: &str = include_str!("../../data/instalaciones-deportivas.geojson");
-const ESPACIOS_JSON: &str = include_str!("../../data/espacios-deportivos.json");
 
 #[component]
 pub fn Place(id: i64) -> Element {
-    let instalaciones_data = use_memo(move || {
-        serde_json::from_str::<InstalacionesGeoJSON>(INSTALACIONES_JSON)
-            .unwrap_or(InstalacionesGeoJSON { features: vec![] })
-    });
-
-    let espacios_data = use_memo(move || {
-        serde_json::from_str::<EspacioDeportivoData>(ESPACIOS_JSON).unwrap_or(
-            EspacioDeportivoData {
-                espacios_deportivos: vec![],
-            },
-        )
-    });
+    // Usar datos cacheados
 
     let instalacion_feature = use_memo(move || {
-        instalaciones_data
-            .read()
+        get_instalaciones()
             .features
             .iter()
             .find(|f| f.properties.instalacion_codigo == id)
@@ -31,9 +18,7 @@ pub fn Place(id: i64) -> Element {
     });
 
     let espacios = use_memo(move || {
-        espacios_data
-            .read()
-            .espacios_deportivos
+        get_espacios()
             .iter()
             .filter(|e| e.instalacion_codigo == id)
             .cloned()
@@ -309,7 +294,4 @@ pub fn Place(id: i64) -> Element {
     }
 }
 
-#[derive(serde::Deserialize, PartialEq)]
-struct EspacioDeportivoData {
-    espacios_deportivos: Vec<EspacioDeportivo>,
-}
+// EspacioDeportivoData wrapper removed: use `get_espacios()` from `crate::data` instead

@@ -1,25 +1,18 @@
-use crate::components::event_card::LayoutVariant;
-use crate::components::{breadcrumb, ui::*};
+use crate::components::ui::*;
 use crate::components::{
-    breadcrumb_items, Breadcrumb, EmptyState, EventCard, FilterConfig, FilterSection, PageHeader,
-    PaginatedListing, Pagination,
+    breadcrumb_items, Breadcrumb, EmptyState, FilterConfig, PaginatedListing,
 };
-use crate::models::{EventoData, DEPORTES};
-use crate::utils::pagination_filters::{paginate, total_pages};
+use crate::models::DEPORTES;
+use crate::data::get_eventos;
+use crate::utils::pagination_filters::{paginate, total_pages, DEFAULT_ITEMS_PER_PAGE, use_page_reset};
 use crate::Route;
 use dioxus::prelude::*;
 
-const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
 
 #[component]
 pub fn Sport(category: String) -> Element {
-    // Cargar eventos desde JSON
-    let eventos_data = use_memo(
-        move || match serde_json::from_str::<EventoData>(EVENTOS_JSON) {
-            Ok(data) => data,
-            Err(_) => EventoData { eventos: vec![] },
-        },
-    );
+    // Cargar eventos desde JSON (cacheados)
+    let eventos_data = use_memo(move || get_eventos().clone());
 
     // Clonar category para usarlo en múltiples closures
     let category_clone1 = category.clone();
@@ -37,8 +30,15 @@ pub fn Sport(category: String) -> Element {
     let mut filter_organizador = use_signal(|| "Todos".to_string());
     let mut filter_municipio = use_signal(|| "Todos".to_string());
     let mut orden = use_signal(|| "fecha_asc".to_string());
-    let mut page = use_signal(|| 1);
-    let items_per_page = 6; // Una fila de 6 eventos
+    let page = use_signal(|| 1);
+    let items_per_page = DEFAULT_ITEMS_PER_PAGE;
+
+    // Resetear página cuando cambian los filtros
+    use_page_reset(page, move || {
+        filter_organizador();
+        filter_municipio();
+        orden();
+    });
 
     // Clonar category para filtros
     let category_clone3 = category.clone();
@@ -104,11 +104,10 @@ pub fn Sport(category: String) -> Element {
         let muni_val = filter_municipio();
         let orden_val = orden();
 
-        let mut filtered: Vec<(usize, crate::models::Evento)> = data
+        let mut filtered: Vec<crate::models::Evento> = data
             .eventos
             .into_iter()
-            .enumerate()
-            .filter(|(_, e)| {
+            .filter(|e| {
                 // Filtro por deporte (usando el keyword del deporte)
                 let deporte_match = if let Some(ref info) = info {
                     let nombre_lower = e.evento_nombre.to_lowercase();
@@ -139,17 +138,17 @@ pub fn Sport(category: String) -> Element {
         // Ordenar
         match orden_val.as_str() {
             "fecha_asc" => {
-                filtered.sort_by(|a, b| a.1.evento_fecha_inicio.cmp(&b.1.evento_fecha_inicio))
+                filtered.sort_by(|a, b| a.evento_fecha_inicio.cmp(&b.evento_fecha_inicio))
             }
             "fecha_desc" => {
-                filtered.sort_by(|a, b| b.1.evento_fecha_inicio.cmp(&a.1.evento_fecha_inicio))
+                filtered.sort_by(|a, b| b.evento_fecha_inicio.cmp(&a.evento_fecha_inicio))
             }
-            "nombre_az" => filtered.sort_by(|a, b| a.1.evento_nombre.cmp(&b.1.evento_nombre)),
-            "nombre_za" => filtered.sort_by(|a, b| b.1.evento_nombre.cmp(&a.1.evento_nombre)),
+            "nombre_az" => filtered.sort_by(|a, b| a.evento_nombre.cmp(&b.evento_nombre)),
+            "nombre_za" => filtered.sort_by(|a, b| b.evento_nombre.cmp(&a.evento_nombre)),
             "organizador" => {
-                filtered.sort_by(|a, b| a.1.evento_organizador.cmp(&b.1.evento_organizador))
+                filtered.sort_by(|a, b| a.evento_organizador.cmp(&b.evento_organizador))
             }
-            "municipio" => filtered.sort_by(|a, b| a.1.municipio_nombre.cmp(&b.1.municipio_nombre)),
+            "municipio" => filtered.sort_by(|a, b| a.municipio_nombre.cmp(&b.municipio_nombre)),
             _ => {}
         }
 
@@ -187,28 +186,6 @@ pub fn Sport(category: String) -> Element {
         };
     }
 
-    // Buscar el evento más próximo (que no haya finalizado)
-    let evento_destacado = use_memo(move || {
-        let eventos = eventos_filtrados();
-        let now = chrono::Local::now().naive_local();
-
-        eventos
-            .into_iter()
-            .filter(|(_, e)| {
-                // Filtrar eventos que no han finalizado
-                if let Ok(fecha_fin) =
-                    chrono::NaiveDateTime::parse_from_str(&e.evento_fecha_fin, "%Y-%m-%d %H:%M:%S")
-                {
-                    fecha_fin >= now
-                } else {
-                    true
-                }
-            })
-            .min_by_key(|(_, e)| {
-                // Ordenar por fecha de inicio más cercana
-                e.evento_fecha_inicio.clone()
-            })
-    });
     let filters = vec![
         FilterConfig {
             label: "Ordenar por:".to_string(),
@@ -241,7 +218,6 @@ pub fn Sport(category: String) -> Element {
             },
             on_change: EventHandler::new(move |val: String| {
                 filter_organizador.set(val);
-                page.set(1);
             }),
         },
         FilterConfig {
@@ -256,7 +232,6 @@ pub fn Sport(category: String) -> Element {
             },
             on_change: EventHandler::new(move |val: String| {
                 filter_municipio.set(val);
-                page.set(1);
             }),
         },
     ];
@@ -272,15 +247,11 @@ pub fn Sport(category: String) -> Element {
                 }
             }),
             description: Some(format!("Mostrando {} eventos", eventos_filtrados().len())),
-            featured: evento_destacado(),
             filters,
             paginated_items: eventos_paginados,
             current_page: page,
             total_pages: total_pages(),
-            items_per_page,
-            item_layout: Some(LayoutVariant::Simple),
             show_empty_state: true,
         }
-
     }
 }

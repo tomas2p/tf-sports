@@ -1,17 +1,14 @@
 use crate::Route;
 use crate::components::ui::*;
-use crate::models::{EventoData};
+// EventoData import removed; use `get_eventos()` helper instead when needed
+use crate::data::get_eventos;
 use dioxus::prelude::*;
 
-const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
 
 #[component]
 pub fn Event(id: i32) -> Element {
-    // Cargar datos
-    let eventos = use_memo(move || {
-        serde_json::from_str::<EventoData>(EVENTOS_JSON)
-            .unwrap_or(EventoData { eventos: vec![] })
-    });
+    // Cargar datos (cacheados)
+    let eventos = use_memo(move || get_eventos().clone());
 
     // Buscar evento por índice
     let evento = use_memo(move || {

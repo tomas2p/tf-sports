@@ -1,45 +1,25 @@
-use crate::components::ui::*;
-use crate::components::{
-    breadcrumb_items, Breadcrumb, CategoryCard, EmptyState, FilterConfig, FilterSection,
-    PageHeader, PaginatedListing, Pagination,
+use crate::components::{breadcrumb_items, Breadcrumb, FilterSpec, PaginatedListing, SearchBar};
+use crate::data::{get_espacios, get_instalaciones};
+use crate::filters;
+use crate::models::{EspacioDeportivo, InstalacionItem};
+use crate::utils::pagination_filters::{
+    paginate, total_pages, use_page_reset, DEFAULT_ITEMS_PER_PAGE,
 };
-use crate::models::{EspacioDeportivo, InstalacionesGeoJSON};
-use crate::utils::pagination_filters::{paginate, total_pages};
 use crate::Route;
 use dioxus::prelude::*;
 use std::collections::HashMap;
 
-const INSTALACIONES_JSON: &str = include_str!("../../data/instalaciones-deportivas.geojson");
-const ESPACIOS_JSON: &str = include_str!("../../data/espacios-deportivos.json");
-
 /// The Places page component that will be rendered when the current route is `[Route::Places]`
 #[component]
 pub fn Places() -> Element {
-    // Cargar instalaciones deportivas
-    let instalaciones_data =
-        use_memo(
-            move || match serde_json::from_str::<InstalacionesGeoJSON>(INSTALACIONES_JSON) {
-                Ok(data) => data,
-                Err(_) => InstalacionesGeoJSON { features: vec![] },
-            },
-        );
-
-    // Cargar espacios deportivos
-    let espacios_data =
-        use_memo(
-            move || match serde_json::from_str::<EspacioDeportivoData>(ESPACIOS_JSON) {
-                Ok(data) => data,
-                Err(_) => EspacioDeportivoData {
-                    espacios_deportivos: vec![],
-                },
-            },
-        );
+    // Cargar instalaciones deportivas y espacios (cacheados)
+    // `get_instalaciones()` y `get_espacios()` devuelven referencias cacheadas
 
     // Agrupar espacios por instalación
     let espacios_por_instalacion = use_memo(move || {
-        let espacios = espacios_data.read();
+        let espacios = get_espacios();
         let mut map: HashMap<i64, Vec<EspacioDeportivo>> = HashMap::new();
-        for espacio in &espacios.espacios_deportivos {
+        for espacio in espacios.iter() {
             map.entry(espacio.instalacion_codigo)
                 .or_insert_with(Vec::new)
                 .push(espacio.clone());
@@ -47,15 +27,22 @@ pub fn Places() -> Element {
         map
     });
 
-    let mut search_query = use_signal(|| String::new());
-    let mut municipio_filter = use_signal(|| String::from("Todos"));
-    let mut orden = use_signal(|| "nombre_az".to_string());
-    let mut current_page = use_signal(|| 1);
-    let items_per_page = 12;
+    let search_query = use_signal(|| String::new());
+    let municipio_filter = use_signal(|| String::from("Todos"));
+    let orden = use_signal(|| "nombre_az".to_string());
+    let current_page = use_signal(|| 1);
+    let items_per_page = DEFAULT_ITEMS_PER_PAGE;
+
+    // Resetear página cuando cambian los filtros
+    use_page_reset(current_page, move || {
+        search_query();
+        municipio_filter();
+        orden();
+    });
 
     // Obtener municipios únicos
     let municipios_unicos = use_memo(move || {
-        let data = instalaciones_data.read();
+        let data = get_instalaciones();
         let mut municipios: Vec<String> = data
             .features
             .iter()
@@ -69,7 +56,7 @@ pub fn Places() -> Element {
 
     // Filtrar y ordenar instalaciones
     let instalaciones_filtradas = use_memo(move || {
-        let data = instalaciones_data.read();
+        let data = get_instalaciones();
         let espacios_map = espacios_por_instalacion.read();
         let query = search_query().to_lowercase();
         let municipio = municipio_filter();
@@ -162,61 +149,33 @@ pub fn Places() -> Element {
             _ => {}
         }
 
+        // Mapear a InstalacionItem con el conteo de espacios
         filtered
+            .into_iter()
+            .map(|feature| {
+                let espacios_count = espacios_por_instalacion
+                    .read()
+                    .get(&feature.properties.instalacion_codigo)
+                    .map(|v| v.len())
+                    .unwrap_or(0);
+
+                InstalacionItem {
+                    feature,
+                    espacios_count,
+                }
+            })
+            .collect::<Vec<_>>()
     });
 
     // Calcular paginación
     let total_items = instalaciones_filtradas().len();
     let total_pages = total_pages(total_items, items_per_page);
 
-    // Resetear página cuando cambian los filtros
-    use_effect(move || {
-        search_query();
-        municipio_filter();
-        orden();
-        current_page.set(1);
-    });
-
     // Obtener instalaciones de la página actual
     let instalaciones_paginadas = use_memo(move || {
         let filtered = instalaciones_filtradas();
         paginate(&filtered, current_page() as usize, items_per_page)
     });
-
-    let filters = vec![
-        FilterConfig {
-            label: "Ordenar por:".to_string(),
-            value: orden,
-            options: vec![
-                ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
-                ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
-                ("municipio".to_string(), "Municipio".to_string()),
-                (
-                    "espacios_desc".to_string(),
-                    "Más espacios primero".to_string(),
-                ),
-                (
-                    "espacios_asc".to_string(),
-                    "Menos espacios primero".to_string(),
-                ),
-            ],
-            on_change: EventHandler::new(move |val: String| orden.set(val)),
-        },
-        FilterConfig {
-            label: "Municipio:".to_string(),
-            value: municipio_filter,
-            options: {
-                let mut opts = vec![("Todos".to_string(), "Todos los municipios".to_string())];
-                for municipio in municipios_unicos() {
-                    opts.push((municipio.clone(), municipio));
-                }
-                opts
-            },
-            on_change: EventHandler::new(move |val: String| {
-                municipio_filter.set(val);
-            }),
-        },
-    ];
 
     rsx! {
         PaginatedListing {
@@ -231,72 +190,21 @@ pub fn Places() -> Element {
                     total_items,
                 ),
             ),
-            featured: None,
-            filters,
-            content: rsx! {
-                // Barra de búsqueda
-                div { class: "mb-6",
-                    input {
-                        r#type: "text",
-                        placeholder: "Buscar instalaciones...",
-                        value: "{search_query}",
-                        class: "w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-950 dark:focus:ring-zinc-300",
-                        oninput: move |evt| search_query.set(evt.value()),
-                    }
-                }
-                div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-4",
-                    if instalaciones_paginadas().is_empty() {
-                        div { class: "col-span-full",
-                            EmptyState {
-                                emoji: "🏟️".to_string(),
-                                title: "No hay instalaciones disponibles".to_string(),
-                                message: "No se encontraron instalaciones con los filtros seleccionados.".to_string(),
-                            }
-                        }
-                    }
-                    for feature in instalaciones_paginadas() {
-                        {
-                            let instalacion = &feature.properties;
-                            let espacios_map = espacios_por_instalacion.read();
-                            let num_espacios = espacios_map
-                                .get(&instalacion.instalacion_codigo)
-                                .map(|v| v.len())
-                                .unwrap_or(0);
-
-                            let badge_text = if num_espacios == 1 {
-                                format!("1 espacio")
-                            } else {
-                                format!("{} espacios", num_espacios)
-                            };
-
-                            rsx! {
-                                Link {
-                                    to: Route::Place {
-                                        id: instalacion.instalacion_codigo,
-                                    },
-                                    class: "no-underline",
-                                    CategoryCard {
-                                        title: instalacion.instalacion_nombre.clone(),
-                                        badge_text,
-                                        description: Some(format!("📍 {}", instalacion.municipio_nombre)),
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            paginated_items: None,
-            current_page,
+            filters: filters!(
+                FilterSpec::Orden(orden, Some(vec![
+                    ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
+                    ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
+                    ("espacios_desc".to_string(), "Más espacios primero".to_string()),
+                    ("espacios_asc".to_string(), "Menos espacios primero".to_string()),
+                ])),
+                FilterSpec::Municipio(municipio_filter, None, Some(municipios_unicos())),
+            ),
+            search_bar: Some(rsx! { SearchBar { value: search_query, placeholder: "Buscar instalaciones...".to_string() } }),
+            grid_classes: "grid gap-6 md:grid-cols-2 lg:grid-cols-4",
+            paginated_items: Some(instalaciones_paginadas),
+            current_page: Some(current_page),
             total_pages,
-            items_per_page,
-            item_layout: None,
-            show_empty_state: false,
+            show_empty_state: true,
         }
     }
-}
-
-#[derive(serde::Deserialize, PartialEq)]
-struct EspacioDeportivoData {
-    espacios_deportivos: Vec<EspacioDeportivo>,
 }

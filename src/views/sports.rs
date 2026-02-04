@@ -1,21 +1,19 @@
-use crate::components::event_card::LayoutVariant;
-use crate::components::{breadcrumb_items, Breadcrumb, CategoryCard, PaginatedListing};
-use crate::models::{EventoData, DEPORTES};
+use crate::components::{breadcrumb_items, Breadcrumb, FilterSpec, PaginatedListing, SearchBar};
+use crate::data::get_eventos;
+use crate::models::{DeporteItem, DEPORTES};
+use crate::utils::pagination_filters::{
+    paginate, total_pages, use_page_reset, DEFAULT_ITEMS_PER_PAGE,
+};
 use crate::Route;
 use dioxus::prelude::*;
 
-const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
+use crate::filters;
 
 /// The Sports page component showing all available sports categories
 #[component]
 pub fn Sports() -> Element {
-    // Cargar eventos para contar por deporte
-    let eventos_data = use_memo(
-        move || match serde_json::from_str::<EventoData>(EVENTOS_JSON) {
-            Ok(data) => data,
-            Err(_) => EventoData { eventos: vec![] },
-        },
-    );
+    // Cargar eventos para contar por deporte (cacheados)
+    let eventos_data = use_memo(move || get_eventos().clone());
 
     // Contar eventos por deporte
     let eventos_por_deporte = use_memo(move || {
@@ -30,71 +28,94 @@ pub fn Sports() -> Element {
         conteo
     });
 
-    // Paginación local para la lista de deportes
-    let items_per_page: usize = 12;
+    // Estado para orden, búsqueda y paginación local para la lista de deportes
+    let orden = use_signal(|| "nombre_az".to_string());
+    let search_query = use_signal(|| String::new());
+    let items_per_page = DEFAULT_ITEMS_PER_PAGE;
     let current_page = use_signal(|| 1usize);
-    let total_pages = {
-        let total = DEPORTES.len();
-        if total == 0 {
-            1
-        } else {
-            (total + items_per_page - 1) / items_per_page
-        }
+
+    // Lista filtrada y ordenada completa (antes de paginar)
+    let filtered_deportes = {
+        let orden = orden.clone();
+        let search_query = search_query.clone();
+        let eventos_por_deporte = eventos_por_deporte.clone();
+        use_memo(move || {
+            let conteo = eventos_por_deporte();
+            let mut items: Vec<DeporteItem> = DEPORTES
+                .iter()
+                .map(|info| DeporteItem {
+                    info,
+                    eventos_count: conteo.get(info.nombre).copied().unwrap_or(0),
+                })
+                .collect();
+
+            // Filtrar por búsqueda
+            let q = search_query().to_lowercase();
+            if !q.is_empty() {
+                items.retain(|i| {
+                    i.info.nombre.to_lowercase().contains(&q)
+                        || i.info.keyword.to_lowercase().contains(&q)
+                });
+            }
+
+            // Ordenar según `orden`
+            match orden().as_str() {
+                "nombre_az" => items.sort_by(|a, b| a.info.nombre.cmp(&b.info.nombre)),
+                "nombre_za" => items.sort_by(|a, b| b.info.nombre.cmp(&a.info.nombre)),
+                "eventos_desc" => items.sort_by(|a, b| b.eventos_count.cmp(&a.eventos_count)),
+                "eventos_asc" => items.sort_by(|a, b| a.eventos_count.cmp(&b.eventos_count)),
+                _ => {}
+            }
+
+            items
+        })
     };
 
-    // Deportes para la página actual
-    let paged_deportes = use_memo({
-        let current_page = current_page.clone();
-        move || {
-            let page = current_page();
-            let start = (page.saturating_sub(1)) * items_per_page;
-            let end = (start + items_per_page).min(DEPORTES.len());
-            DEPORTES[start..end].iter().cloned().collect::<Vec<_>>()
-        }
+    // Calcular total de páginas a partir de la lista filtrada
+    let total_pages = {
+        let fd = filtered_deportes.clone();
+        let memo = use_memo(move || {
+            let total = fd().len();
+            total_pages(total, items_per_page)
+        });
+        memo()
+    };
+
+    // Resetear página cuando cambian filtros relevantes
+    use_page_reset(current_page, move || {
+        orden();
+        search_query();
     });
+
+    // Deportes para la página actual como DeporteItem, con orden aplicado
+    let paged_deportes = {
+        let current_page = current_page.clone();
+        let fd = filtered_deportes.clone();
+        use_memo(move || {
+            let page = current_page();
+            let items = fd();
+            paginate(&items, page as usize, items_per_page)
+        })
+    };
 
     rsx! {
       PaginatedListing {
-        title: Some("Deportes en Tenerife".to_string()),
+        title: Some("Deportes".to_string()),
         breadcrumb: Some(rsx! {
           Breadcrumb { items: breadcrumb_items!(("Inicio", Route::Home {}), ("Deportes", Route::Sports {})) }
         }),
-        description: Some(format!("Mostrando {} deportes disponibles en la isla", DEPORTES.len())),
-        item_layout: Some(LayoutVariant::Simple),
-        current_page: Some(current_page.clone()),
+        description: Some(format!("Mostrando {} deportes disponibles en la isla", filtered_deportes().len())),
+                grid_classes: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
+                current_page: Some(current_page),
+                search_bar: Some(rsx! { SearchBar { value: search_query, placeholder: "Buscar deportes...".to_string() } }),
+        filters: filters!(
+            FilterSpec::Orden(orden, Some(vec![("nombre_az".to_string(), "Nombre (A-Z)"
+            .to_string()), ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
+            ("eventos_desc".to_string(), "Más eventos primero".to_string()), ("eventos_asc"
+            .to_string(), "Menos eventos primero".to_string())]))
+        ),
         total_pages,
-        items_per_page,
-        content: Some(rsx! {
-          div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
-            for deporte in paged_deportes() {
-              {
-                  let conteo = eventos_por_deporte();
-                  let cantidad = conteo.get(deporte.nombre).copied().unwrap_or(0);
-                  let badge_text = if cantidad == 1 {
-                      format!("{} evento", cantidad)
-                  } else {
-                      format!("{} eventos", cantidad)
-                  };
-
-                  rsx! {
-                    Link {
-                      to: Route::Sport {
-                          category: deporte.nombre.to_string(),
-                      },
-                      class: "no-underline",
-                      CategoryCard {
-                        emoji: deporte.emoji.to_string(),
-                        title: deporte.nombre.to_string(),
-                        badge_text,
-                        description: Some(format!("Descubre eventos de {} en Tenerife", deporte.nombre.to_lowercase())),
-                      }
-                    }
-                  }
-              }
-            }
-          }
-        }),
-        paginated_items: None,
+        paginated_items: Some(paged_deportes),
         show_empty_state: true,
       }
     }

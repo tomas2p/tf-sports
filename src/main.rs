@@ -6,6 +6,8 @@ use views::{Event, Events, Home, Navbar, Place, Places, Sport, Sports};
 
 /// Define a components module that contains all shared components for our app.
 mod components;
+/// Centralized data includes (JSON files)
+mod data;
 /// Define a models module that contains data structures.
 mod models;
 /// Define a styles module that contains CSS class constants.

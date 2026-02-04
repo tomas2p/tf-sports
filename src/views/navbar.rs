@@ -1,66 +1,70 @@
-use crate::Route;
-use crate::theme::Theme;
-use dioxus::prelude::*;
+use std::vec;
 
-/// The Navbar component that will be rendered on all pages of our app since every page is under the layout.
-///
-/// This layout component wraps the UI in a common navbar. The contents of the routes
-/// will be rendered under the outlet inside this component
+use crate::components::ui::{Button, ButtonVariant, ButtonShape};
+use crate::theme::Theme;
+use crate::Route;
+use dioxus::prelude::*;
+use dioxus_free_icons::icons::fi_icons::{FiMoon, FiSun};
+use dioxus_free_icons::Icon;
+
+/// The Navbar layout wraps the app with a sticky navigation bar and a main
+/// content area that fills the remaining vertical space. Using a flex column
+/// container with `flex-1` on `main` prevents accidental vertical overflow
+/// when combining a header and content with `min-h-screen` semantics.
 #[component]
 pub fn Navbar() -> Element {
     let mut theme = use_context::<Signal<Theme>>();
-    
-    rsx! {
-        nav { class: "sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-950/60",
-            div { class: "container mx-auto px-4 md:px-6 lg:px-8",
-                div { class: "flex h-16 items-center justify-between",
-                    div { class: "flex items-center gap-8",
-                        Link {
-                            to: Route::Home {},
-                            class: "text-lg font-bold text-zinc-950 dark:text-zinc-50 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors",
-                            "TF Sports"
-                        }
-                        div { class: "flex gap-6",
-                            Link {
-                                to: Route::Events {},
-                                class: "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100",
-                                "Eventos"
-                            }
-                            Link {
-                                to: Route::Sports {},
-                                class: "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100",
-                                "Deportes"
-                            }
-                            Link {
-                                to: Route::Places {},
-                                class: "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100",
-                                "Instalaciones"
-                            }
-                        }
-                    }
+    let link_class = "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100";
+    let icon_class = "w-6 h-6 md:w-8 md:h-8 fill-current rounded-full";
 
-                    // Botón de tema
-                    button {
-                        class: "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 dark:focus-visible:ring-zinc-300 h-10 w-10 hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                        onclick: move |_| {
-                            web_sys::console::log_1(&format!("Tema actual: {:?}", theme()).into());
-                            let new_theme = theme().toggle();
-                            web_sys::console::log_1(&format!("Nuevo tema: {:?}", new_theme).into());
-                            new_theme.apply();
-                            new_theme.save_to_storage();
-                            theme.set(new_theme);
-                        },
-                        if matches!(theme(), Theme::Dark) {
-                            "☀️"
-                        } else {
-                            "🌙"
+    rsx! {
+        div { class: "min-h-screen flex flex-col bg-white dark:bg-zinc-950",
+            nav { class: "sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-950/60",
+                div { class: "container mx-auto px-4 md:px-6 lg:px-8",
+                    div { class: "flex h-16 items-center justify-between",
+                        div { class: "flex flex-col md:flex-row place-items-baseline gap-x-8",
+                            Link {
+                                to: Route::Home {},
+                                class: "text-lg font-bold text-zinc-950 dark:text-zinc-50 hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors",
+                                "TF Sports"
+                            }
+                            div { class: "flex gap-6",
+                                Link { to: Route::Events {}, class: "{link_class}", "Eventos" }
+                                Link { to: Route::Sports {}, class: "{link_class}", "Deportes" }
+                                Link { to: Route::Places {}, class: "{link_class}", "Instalaciones" }
+                            }
+                        }
+
+                        // Theme toggle button
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            shape: ButtonShape::Default,
+                            is_icon: Some(true),
+                            onclick: move |_| {
+                                let new_theme = theme().toggle();
+                                new_theme.apply();
+                                new_theme.save_to_storage();
+                                theme.set(new_theme);
+                            },
+                            { if matches!(theme(), Theme::Dark) { rsx! {
+                                Icon {
+                                    class: "{icon_class}",
+                                    icon: FiSun,
+                                }
+                            }} else { rsx! {
+                                Icon {
+                                    class: "{icon_class}",
+                                    icon: FiMoon,
+                                }
+                            }} }
                         }
                     }
                 }
             }
-        }
 
-        // The `Outlet` component is used to render the next component inside the layout.
-        div { class: "min-h-screen bg-white dark:bg-zinc-950", Outlet::<Route> {} }
+            main { class: "flex-1 overflow-auto",
+                Outlet::<Route> {}
+            }
+        }
     }
 }

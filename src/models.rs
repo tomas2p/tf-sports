@@ -171,3 +171,92 @@ pub struct Geometry {
     pub geom_type: String,
     pub coordinates: Vec<f64>,
 }
+
+// Trait y wrappers para renderizado genérico
+use dioxus::prelude::*;
+use crate::components::{EventCard, CategoryCard};
+use crate::components::event_card::LayoutVariant;
+use crate::Route;
+
+/// Trait para tipos que pueden ser renderizados en PaginatedListing
+pub trait Renderable: Clone + PartialEq + 'static {
+    fn render(&self, index: usize) -> Element;
+}
+
+// Implementación para Evento
+impl Renderable for Evento {
+    fn render(&self, index: usize) -> Element {
+        rsx! {
+            EventCard {
+                evento: self.clone(),
+                index: index as i32,
+                layout: LayoutVariant::Detailed,
+            }
+        }
+    }
+}
+
+// Wrapper para DeporteInfo
+#[derive(Clone, PartialEq)]
+pub struct DeporteItem {
+    pub info: &'static DeporteInfo,
+    pub eventos_count: usize,
+}
+
+impl Renderable for DeporteItem {
+    fn render(&self, _index: usize) -> Element {
+        let badge_text = if self.eventos_count == 1 {
+            format!("{} evento", self.eventos_count)
+        } else {
+            format!("{} eventos", self.eventos_count)
+        };
+
+        rsx! {
+            Link {
+                to: Route::Sport {
+                    category: self.info.nombre.to_string(),
+                },
+                class: "no-underline",
+                CategoryCard {
+                    emoji: Some(self.info.emoji.to_string()),
+                    title: self.info.nombre.to_string(),
+                    badge_text,
+                    description: Some(format!("Descubre eventos de {} en Tenerife", self.info.nombre.to_lowercase())),
+                }
+            }
+        }
+    }
+}
+
+// Wrapper para InstalacionFeature
+#[derive(Clone, PartialEq)]
+pub struct InstalacionItem {
+    pub feature: InstalacionFeature,
+    pub espacios_count: usize,
+}
+
+impl Renderable for InstalacionItem {
+    fn render(&self, _index: usize) -> Element {
+        let instalacion = &self.feature.properties;
+        let badge_text = if self.espacios_count == 1 {
+            format!("1 espacio")
+        } else {
+            format!("{} espacios", self.espacios_count)
+        };
+
+        rsx! {
+            Link {
+                to: Route::Place {
+                    id: instalacion.instalacion_codigo,
+                },
+                class: "no-underline",
+                CategoryCard {
+                    emoji: None,
+                    title: instalacion.instalacion_nombre.clone(),
+                    badge_text,
+                    description: Some(format!("📍 {}", instalacion.municipio_nombre)),
+                }
+            }
+        }
+    }
+}

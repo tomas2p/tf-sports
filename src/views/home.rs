@@ -2,25 +2,17 @@ use crate::Route;
 use crate::components::ui::*;
 use crate::components::{Calendar, EventCard, EmptyState};
 use crate::components::event_card::LayoutVariant;
-use crate::models::{EventoData, Evento};
+use crate::models::Evento;
+use crate::data::get_eventos;
 use crate::utils::date_utils::fecha_en_espanol;
 use dioxus::prelude::*;
 use chrono::Datelike;
 
-const EVENTOS_JSON: &str = include_str!("../../data/agenda-de-eventos-deportivos-en-tenerife.json");
 
 /// The Home page component that will be rendered when the current route is `[Route::Home]`
 #[component]
 pub fn Home() -> Element {
-    let eventos_data = use_memo(move || {
-        match serde_json::from_str::<EventoData>(EVENTOS_JSON) {
-            Ok(data) => data,
-            Err(e) => {
-                web_sys::console::log_1(&format!("Error parsing JSON: {:?}", e).into());
-                EventoData { eventos: vec![] }
-            }
-        }
-    });
+    let eventos_data = use_memo(move || get_eventos().clone());
     
     let selected_date = use_signal(|| None::<chrono::NaiveDate>);
     let today = chrono::Local::now().date_naive();
