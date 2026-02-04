@@ -5,11 +5,15 @@ use dioxus::prelude::*;
 pub fn PageHeader(
     title: String,
     description: Option<String>,
+    #[props(default = None)] breadcrumb: Option<Element>,
     #[props(default = None)] badge: Option<Element>,
     #[props(default = None)] actions: Option<Element>,
 ) -> Element {
     rsx! {
         div { class: "space-y-4 mb-8",
+            if let Some(bc) = breadcrumb {
+                div { class: "mb-2", {bc} }
+            }
             if let Some(badge_content) = badge {
                 div { class: "mb-2", {badge_content} }
             }

@@ -1,8 +1,8 @@
 use crate::components::event_card::LayoutVariant;
-use crate::components::ui::*;
+use crate::components::{breadcrumb, ui::*};
 use crate::components::{
-    Breadcrumb, BreadcrumbItem, EmptyState, EventCard, FilterConfig, FilterSection, PageHeader,
-    Pagination,
+    breadcrumb_items, Breadcrumb, EmptyState, EventCard, FilterConfig, FilterSection, PageHeader,
+    PaginatedListing, Pagination,
 };
 use crate::models::{EventoData, DEPORTES};
 use crate::utils::pagination_filters::{paginate, total_pages};
@@ -209,134 +209,78 @@ pub fn Sport(category: String) -> Element {
                 e.evento_fecha_inicio.clone()
             })
     });
+    let filters = vec![
+        FilterConfig {
+            label: "Ordenar por:".to_string(),
+            value: orden,
+            options: vec![
+                (
+                    "fecha_asc".to_string(),
+                    "Fecha (próximos primero)".to_string(),
+                ),
+                (
+                    "fecha_desc".to_string(),
+                    "Fecha (lejanos primero)".to_string(),
+                ),
+                ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
+                ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
+                ("organizador".to_string(), "Organizador".to_string()),
+                ("municipio".to_string(), "Municipio".to_string()),
+            ],
+            on_change: EventHandler::new(move |val: String| orden.set(val)),
+        },
+        FilterConfig {
+            label: "Organizador:".to_string(),
+            value: filter_organizador,
+            options: {
+                let mut opts = vec![("Todos".to_string(), "Todos los organizadores".to_string())];
+                for org in organizadores_disponibles() {
+                    opts.push((org.clone(), org));
+                }
+                opts
+            },
+            on_change: EventHandler::new(move |val: String| {
+                filter_organizador.set(val);
+                page.set(1);
+            }),
+        },
+        FilterConfig {
+            label: "Municipio:".to_string(),
+            value: filter_municipio,
+            options: {
+                let mut opts = vec![("Todos".to_string(), "Todos los municipios".to_string())];
+                for muni in municipios_disponibles() {
+                    opts.push((muni.clone(), muni));
+                }
+                opts
+            },
+            on_change: EventHandler::new(move |val: String| {
+                filter_municipio.set(val);
+                page.set(1);
+            }),
+        },
+    ];
 
     rsx! {
-        Container {
-            Section {
-                // Breadcrumb
+        PaginatedListing {
+            title: Some(format!("{} en Tenerife", category)),
+            breadcrumb: Some(rsx! {
                 Breadcrumb {
-                    items: vec![
-                        BreadcrumbItem {
-                            label: "Inicio".to_string(),
-                            route: Some(Route::Home {}),
-                        },
-                        BreadcrumbItem {
-                            label: "Deportes".to_string(),
-                            route: Some(Route::Sports {}),
-                        },
-                        BreadcrumbItem {
-                            label: category.clone(),
-                            route: None,
-                        },
-                    ],
+                    items: breadcrumb_items!(
+                        ("Inicio", Route::Home {}), ("Deportes", Route::Sports {}), (category.clone())
+                    ),
                 }
-
-                // Header
-                PageHeader {
-                    title: format!("{} en Tenerife", category),
-                    description: Some(format!("Mostrando {} eventos", eventos_filtrados().len())),
-                }
-
-                // Featured Card con evento destacado
-                if let Some((idx, evento)) = evento_destacado() {
-                    Card { class: "mb-8 overflow-hidden",
-                        div { class: "grid md:grid-cols-2",
-                            div { class: "p-8 flex flex-col justify-center",
-                                Badge {
-                                    variant: match evento.get_badge_variant() {
-                                        "EN VIVO" => BadgeVariant::Default,
-                                        "FINALIZADO" => BadgeVariant::Outline,
-                                        _ => BadgeVariant::Secondary,
-                                    },
-                                    class: "mb-4",
-                                    "{evento.get_badge_variant()}"
-                                }
-                                h2 { class: "text-3xl font-bold text-zinc-950 dark:text-zinc-50 mb-4",
-                                    "{evento.evento_nombre}"
-                                }
-                                p { class: "text-zinc-600 dark:text-zinc-400 mb-6",
-                                    "{evento.evento_descripcion}"
-                                }
-                                Link { to: Route::Event { id: idx as i32 },
-                                    Button { variant: ButtonVariant::Default, "Ver Detalles" }
-                                }
-                            }
-                            div { class: "bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 min-h-[300px] flex items-center justify-center",
-                                span { class: "text-9xl", "{evento.get_deporte_emoji()}" }
-                            }
-                        }
-                    }
-                }
-
-                Separator { class: "my-8" }
-
-                // Filtros y Ordenación
-                FilterSection {
-                    filters: vec![
-                        FilterConfig {
-                            label: "Ordenar por:".to_string(),
-                            value: orden,
-                            options: vec![
-                                ("fecha_asc".to_string(), "Fecha (próximos primero)".to_string()),
-                                ("fecha_desc".to_string(), "Fecha (lejanos primero)".to_string()),
-                                ("nombre_az".to_string(), "Nombre (A-Z)".to_string()),
-                                ("nombre_za".to_string(), "Nombre (Z-A)".to_string()),
-                                ("organizador".to_string(), "Organizador".to_string()),
-                                ("municipio".to_string(), "Municipio".to_string()),
-                            ],
-                            on_change: EventHandler::new(move |val: String| orden.set(val)),
-                        },
-                        FilterConfig {
-                            label: "Organizador:".to_string(),
-                            value: filter_organizador,
-                            options: {
-                                let mut opts = vec![
-                                    ("Todos".to_string(), "Todos los organizadores".to_string()),
-                                ];
-                                for org in organizadores_disponibles() {
-                                    opts.push((org.clone(), org));
-                                }
-                                opts
-                            },
-                            on_change: EventHandler::new(move |val: String| {
-                                filter_organizador.set(val);
-                                page.set(1);
-                            }),
-                        },
-                        FilterConfig {
-                            label: "Municipio:".to_string(),
-                            value: filter_municipio,
-                            options: {
-                                let mut opts = vec![
-                                    ("Todos".to_string(), "Todos los municipios".to_string()),
-                                ];
-                                for muni in municipios_disponibles() {
-                                    opts.push((muni.clone(), muni));
-                                }
-                                opts
-                            },
-                            on_change: EventHandler::new(move |val: String| {
-                                filter_municipio.set(val);
-                                page.set(1);
-                            }),
-                        },
-                    ],
-                }
-
-                // Grid de eventos
-                div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-3",
-                    for (idx , evento) in eventos_paginados() {
-                        EventCard {
-                            evento,
-                            index: idx as i32,
-                            layout: LayoutVariant::Simple,
-                        }
-                    }
-                }
-
-                // Paginación
-                Pagination { current_page: page, total_pages: total_pages() }
-            }
+            }),
+            description: Some(format!("Mostrando {} eventos", eventos_filtrados().len())),
+            featured: evento_destacado(),
+            filters,
+            paginated_items: eventos_paginados,
+            current_page: page,
+            total_pages: total_pages(),
+            items_per_page,
+            item_layout: Some(LayoutVariant::Simple),
+            show_empty_state: true,
         }
+
     }
 }

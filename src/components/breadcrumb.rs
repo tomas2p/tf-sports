@@ -8,7 +8,29 @@ pub struct BreadcrumbItem {
     pub route: Option<Route>,
 }
 
-/// Componente reutilizable para navegación tipo breadcrumb
+/// Macro helper para crear vector de BreadcrumbItem de forma concisa.
+/// Uso:
+/// breadcrumb_items!(
+///     ("Inicio", Route::Home {}),
+///     ("Deportes", Route::Sports {}),
+///     (category.clone())
+/// );
+#[macro_export]
+macro_rules! breadcrumb_items {
+    ($( ($label:expr $(, $route:expr)? ) ),* $(,)?) => {{
+        let mut v = Vec::new();
+        $(
+            v.push(crate::components::breadcrumb::BreadcrumbItem {
+                label: $label.to_string(),
+                route: breadcrumb_items!(@opt $($route)?),
+            });
+        )*
+        v
+    }};
+    (@opt $route:expr) => { Some($route) };
+    (@opt) => { None };
+}
+
 #[component]
 pub fn Breadcrumb(items: Vec<BreadcrumbItem>) -> Element {
     rsx! {

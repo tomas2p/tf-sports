@@ -1,5 +1,5 @@
-use crate::components::ui::*;
-use crate::components::CategoryCard;
+use crate::components::event_card::LayoutVariant;
+use crate::components::{breadcrumb_items, Breadcrumb, CategoryCard, PaginatedListing};
 use crate::models::{EventoData, DEPORTES};
 use crate::Route;
 use dioxus::prelude::*;
@@ -30,49 +30,72 @@ pub fn Sports() -> Element {
         conteo
     });
 
+    // Paginación local para la lista de deportes
+    let items_per_page: usize = 12;
+    let current_page = use_signal(|| 1usize);
+    let total_pages = {
+        let total = DEPORTES.len();
+        if total == 0 {
+            1
+        } else {
+            (total + items_per_page - 1) / items_per_page
+        }
+    };
+
+    // Deportes para la página actual
+    let paged_deportes = use_memo({
+        let current_page = current_page.clone();
+        move || {
+            let page = current_page();
+            let start = (page.saturating_sub(1)) * items_per_page;
+            let end = (start + items_per_page).min(DEPORTES.len());
+            DEPORTES[start..end].iter().cloned().collect::<Vec<_>>()
+        }
+    });
+
     rsx! {
-      Container {
-        Section {
-          div { class: "space-y-8",
-            div { class: "text-center space-y-4",
-              h1 { class: "text-4xl md:text-5xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50",
-                "Deportes en Tenerife"
-              }
-              p { class: "text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto",
-                "Explora todos los deportes disponibles en la isla"
-              }
-            }
+      PaginatedListing {
+        title: Some("Deportes en Tenerife".to_string()),
+        breadcrumb: Some(rsx! {
+          Breadcrumb { items: breadcrumb_items!(("Inicio", Route::Home {}), ("Deportes", Route::Sports {})) }
+        }),
+        description: Some(format!("Mostrando {} deportes disponibles en la isla", DEPORTES.len())),
+        item_layout: Some(LayoutVariant::Simple),
+        current_page: Some(current_page.clone()),
+        total_pages,
+        items_per_page,
+        content: Some(rsx! {
+          div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
+            for deporte in paged_deportes() {
+              {
+                  let conteo = eventos_por_deporte();
+                  let cantidad = conteo.get(deporte.nombre).copied().unwrap_or(0);
+                  let badge_text = if cantidad == 1 {
+                      format!("{} evento", cantidad)
+                  } else {
+                      format!("{} eventos", cantidad)
+                  };
 
-            div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
-              for deporte in DEPORTES {
-                {
-                    let conteo = eventos_por_deporte();
-                    let cantidad = conteo.get(deporte.nombre).copied().unwrap_or(0);
-                    let badge_text = if cantidad == 1 {
-                        format!("{} evento", cantidad)
-                    } else {
-                        format!("{} eventos", cantidad)
-                    };
-
-                    rsx! {
-                      Link {
-                        to: Route::Sport {
-                            category: deporte.nombre.to_string(),
-                        },
-                        class: "no-underline",
-                        CategoryCard {
-                          emoji: deporte.emoji.to_string(),
-                          title: deporte.nombre.to_string(),
-                          badge_text,
-                          description: Some(format!("Descubre eventos de {} en Tenerife", deporte.nombre.to_lowercase())),
-                        }
+                  rsx! {
+                    Link {
+                      to: Route::Sport {
+                          category: deporte.nombre.to_string(),
+                      },
+                      class: "no-underline",
+                      CategoryCard {
+                        emoji: deporte.emoji.to_string(),
+                        title: deporte.nombre.to_string(),
+                        badge_text,
+                        description: Some(format!("Descubre eventos de {} en Tenerife", deporte.nombre.to_lowercase())),
                       }
                     }
-                }
+                  }
               }
             }
           }
-        }
+        }),
+        paginated_items: None,
+        show_empty_state: true,
       }
     }
 }
