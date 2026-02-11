@@ -8,31 +8,32 @@ use crate::utils::pagination_filters::{
 use crate::Route;
 use dioxus::prelude::*;
 use js_sys::Date;
+use std::collections::HashMap;
 
 #[component]
 pub fn Sport(category: String) -> Element {
     // Cargar eventos desde JSON (cacheados) — mantener referencia sin clonar todo
     let eventos_data = use_memo(move || get_eventos());
 
-    // Precomputar deporte detectado por índice (normalizado) para evitar recalcularlo muchas veces
-    let detected_deportes = use_memo(move || {
+    // Indexar eventos por deporte normalizado para iterar solo el subconjunto necesario
+    let eventos_por_deporte = use_memo(move || {
         let start = Date::now();
         let data = eventos_data();
-        let result: Vec<_> = data
-            .eventos
-            .iter()
-            .map(|e| normalize_text(&e.get_deporte()))
-            .collect();
+        let mut map: HashMap<String, Vec<usize>> = HashMap::new();
+        for (i, e) in data.eventos.iter().enumerate() {
+            let deporte = normalize_text(&e.get_deporte());
+            map.entry(deporte).or_default().push(i);
+        }
         let elapsed = Date::now() - start;
         web_sys::console::log_1(
             &format!(
-                "detected_deportes precompute: {:.2} ms ({} eventos)",
+                "eventos_por_deporte index: {:.2} ms ({} keys)",
                 elapsed,
-                result.len()
+                map.len()
             )
             .into(),
         );
-        result
+        map
     });
 
     // Signals para filtros, búsqueda y paginación
@@ -59,13 +60,14 @@ pub fn Sport(category: String) -> Element {
         let data = eventos_data();
         let deporte_actual = normalized_category();
 
-        let mut orgs: Vec<String> = data
-            .eventos
-            .iter()
-            .enumerate()
-            .filter(|(i, _e)| detected_deportes()[*i] == deporte_actual)
-            .map(|(_i, e)| e.evento_organizador.clone())
-            .collect();
+        let mut orgs: Vec<String> = Vec::new();
+        if let Some(indices) = eventos_por_deporte().get(&deporte_actual) {
+            for i in indices {
+                if let Some(e) = data.eventos.get(*i) {
+                    orgs.push(e.evento_organizador.clone());
+                }
+            }
+        }
         orgs.sort();
         orgs.dedup();
         let elapsed = Date::now() - start;
@@ -85,13 +87,16 @@ pub fn Sport(category: String) -> Element {
         let data = eventos_data();
         let deporte_actual = normalized_category();
 
-        let mut munis: Vec<String> = data
-            .eventos
-            .iter()
-            .enumerate()
-            .filter(|(i, _e)| detected_deportes()[*i] == deporte_actual)
-            .filter_map(|(_i, e)| e.municipio_nombre.clone())
-            .collect();
+        let mut munis: Vec<String> = Vec::new();
+        if let Some(indices) = eventos_por_deporte().get(&deporte_actual) {
+            for i in indices {
+                if let Some(e) = data.eventos.get(*i) {
+                    if let Some(m) = e.municipio_nombre.clone() {
+                        munis.push(m);
+                    }
+                }
+            }
+        }
         munis.sort();
         munis.dedup();
         let elapsed = Date::now() - start;
@@ -120,49 +125,48 @@ pub fn Sport(category: String) -> Element {
             &format!("Filtrando eventos para deporte: '{}'", deporte_actual).into(),
         );
 
-        // Filtramos iterando por índice para usar `detected_deportes` y evitar recalcular `get_deporte()`
-        let mut filtered: Vec<(usize, crate::models::Evento)> = data
-            .eventos
-            .iter()
-            .enumerate()
-            .filter(|(i, e)| {
-                // Filtro por deporte usando el deporte ya detectado y normalizado
-                let deporte_match = detected_deportes()[*i] == deporte_actual;
+        // Solo iterar índices del deporte actual usando el índice precomputado
+        let mut filtered: Vec<(usize, crate::models::Evento)> = Vec::new();
+        if let Some(indices) = eventos_por_deporte().get(&deporte_actual) {
+            for i in indices {
+                if let Some(e) = data.eventos.get(*i) {
+                    // Filtro por organizador
+                    let org_match = if org_val == "Todos" {
+                        true
+                    } else {
+                        e.evento_organizador == org_val
+                    };
 
-                // Filtro por organizador
-                let org_match = if org_val == "Todos" {
-                    true
-                } else {
-                    e.evento_organizador == org_val
-                };
+                    // Filtro por municipio
+                    let muni_match = if muni_val == "Todos" {
+                        true
+                    } else {
+                        e.municipio_nombre.as_ref() == Some(&muni_val)
+                    };
 
-                // Filtro por municipio
-                let muni_match = if muni_val == "Todos" {
-                    true
-                } else {
-                    e.municipio_nombre.as_ref() == Some(&muni_val)
-                };
+                    let search_match = if query.is_empty() {
+                        true
+                    } else {
+                        let nombre = normalize_text(&strip_html(&e.evento_nombre));
+                        let desc = normalize_text(&strip_html(&e.evento_descripcion));
+                        let lugar = normalize_text(&e.evento_lugar.clone().unwrap_or_default());
+                        let municipio =
+                            normalize_text(&e.municipio_nombre.clone().unwrap_or_default());
+                        let organizador = normalize_text(&e.evento_organizador);
 
-                let search_match = if query.is_empty() {
-                    true
-                } else {
-                    let nombre = normalize_text(&strip_html(&e.evento_nombre));
-                    let desc = normalize_text(&strip_html(&e.evento_descripcion));
-                    let lugar = normalize_text(&e.evento_lugar.clone().unwrap_or_default());
-                    let municipio = normalize_text(&e.municipio_nombre.clone().unwrap_or_default());
-                    let organizador = normalize_text(&e.evento_organizador);
+                        nombre.contains(&query)
+                            || desc.contains(&query)
+                            || lugar.contains(&query)
+                            || municipio.contains(&query)
+                            || organizador.contains(&query)
+                    };
 
-                    nombre.contains(&query)
-                        || desc.contains(&query)
-                        || lugar.contains(&query)
-                        || municipio.contains(&query)
-                        || organizador.contains(&query)
-                };
-
-                deporte_match && org_match && muni_match && search_match
-            })
-            .map(|(i, e)| (i, e.clone()))
-            .collect();
+                    if org_match && muni_match && search_match {
+                        filtered.push((*i, e.clone()));
+                    }
+                }
+            }
+        }
 
         let filter_elapsed = Date::now() - start;
         web_sys::console::log_1(
