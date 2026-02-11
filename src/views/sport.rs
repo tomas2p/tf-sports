@@ -1,4 +1,5 @@
-use crate::components::{breadcrumb_items, Breadcrumb, FilterSpec, PaginatedListing, SearchBar};
+use crate::components::{breadcrumb_items, Breadcrumb, FilterSpec, PaginatedListing, SearchBar, EventCard};
+use crate::components::event_card::LayoutVariant;
 use crate::data::get_eventos;
 use crate::filters;
 use crate::models::{normalize_text, strip_html};
@@ -245,8 +246,23 @@ pub fn Sport(category: String) -> Element {
         FilterSpec::Municipio(filter_municipio, None, Some(municipios_disponibles())),
     );
 
+    let content = rsx! {
+        div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
+            for (_index, (orig_idx, evento)) in eventos_paginados().into_iter().enumerate() {
+                EventCard {
+                    evento: evento,
+                    index: orig_idx as i32,
+                    layout: LayoutVariant::Detailed,
+                    breadcrumb_override: Some(breadcrumb_items!(
+                        ("Inicio", Route::Home {}), ("Deportes", Route::Sports {}), (category.clone())
+                    )),
+                }
+            }
+        }
+    };
+
     rsx! {
-        PaginatedListing {
+        PaginatedListing::<(usize, crate::models::Evento)> {
             title: Some(format!("{} en Tenerife", category)),
             breadcrumb: Some(rsx! {
                 Breadcrumb {
@@ -265,7 +281,7 @@ pub fn Sport(category: String) -> Element {
             filters,
             search_bar: Some(rsx! { SearchBar { value: search_query, placeholder: format!("Buscar en {}...", category) } }),
             grid_classes: "grid gap-6 md:grid-cols-2 lg:grid-cols-6",
-            paginated_items: eventos_paginados,
+            content: Some(content),
             current_page: page,
             total_pages: total_pages(),
             show_empty_state: true,

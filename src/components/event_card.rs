@@ -1,6 +1,6 @@
-use crate::Route;
 use crate::components::ui::*;
 use crate::models::Evento;
+use crate::Route;
 use dioxus::prelude::*;
 
 /// Define las variantes de layout para EventCard
@@ -18,6 +18,9 @@ pub fn EventCard(
     evento: Evento,
     index: i32,
     #[props(default = LayoutVariant::Simple)] layout: LayoutVariant,
+    #[props(default = None)] breadcrumb_override: Option<
+        Vec<crate::components::breadcrumb::BreadcrumbItem>,
+    >,
 ) -> Element {
     let header_visual = match layout {
         LayoutVariant::Detailed => Some(rsx! {
@@ -27,14 +30,22 @@ pub fn EventCard(
         }),
         LayoutVariant::Simple => None,
     };
-    
+
     let overflow_hidden = matches!(layout, LayoutVariant::Detailed);
-    
+    // Obtener contexto global de breadcrumb (proporcionado en `App`)
+    let mut breadcrumb_ctx =
+        use_context::<Signal<Option<Vec<crate::components::breadcrumb::BreadcrumbItem>>>>();
+
     rsx! {
         BaseCard {
             to_route: Route::Event { id: index },
             header_visual,
             overflow_hidden,
+            onclick: move |_| {
+                if let Some(override_items) = breadcrumb_override.clone() {
+                    breadcrumb_ctx.write().replace(override_items);
+                }
+            },
             CardHeader {
                 Badge {
                     variant: match evento.get_badge_variant() {

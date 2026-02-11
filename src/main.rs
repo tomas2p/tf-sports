@@ -80,6 +80,12 @@ fn App() -> Element {
 
     use_context_provider(|| theme);
 
+    // Breadcrumb context: permite a páginas hijas (por ejemplo `Sport`) publicar
+    // una ruta parcial que `Event` pueda consumir para renderizar el breadcrumb
+    use crate::components::breadcrumb::BreadcrumbItem;
+    let breadcrumb_ctx = use_signal(|| Option::<Vec<BreadcrumbItem>>::None);
+    use_context_provider(|| breadcrumb_ctx);
+
     // The `rsx!` macro lets us define HTML inside of rust. It expands to an Element with all of our HTML inside.
     rsx! {
         // Script para aplicar tema antes del render

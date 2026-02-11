@@ -1,5 +1,5 @@
-use dioxus::prelude::*;
 use crate::Route;
+use dioxus::prelude::*;
 
 /// Componente base de tarjeta genérico que soporta imagen opcional, routing y hover effects
 #[component]
@@ -10,13 +10,18 @@ pub fn BaseCard(
     #[props(default = "hover:shadow-md".to_string())] hover_class: String,
     #[props(default = false)] overflow_hidden: bool,
     #[props(default = "".to_string())] class: String,
+    onclick: Option<EventHandler<MouseEvent>>,
 ) -> Element {
-    let overflow_class = if overflow_hidden { "overflow-hidden" } else { "" };
+    let overflow_class = if overflow_hidden {
+        "overflow-hidden"
+    } else {
+        ""
+    };
     let card_classes = format!(
         "rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm {} transition-shadow cursor-pointer h-full {} {}",
         hover_class, overflow_class, class
     );
-    
+
     let card_content = rsx! {
         div { class: "{card_classes}",
             if let Some(visual) = header_visual {
@@ -25,21 +30,34 @@ pub fn BaseCard(
             {children}
         }
     };
-    
+
     if let Some(route) = to_route {
         rsx! {
-            Link { to: route, class: "no-underline", {card_content} }
+            Link {
+                to: route,
+                class: "no-underline",
+                onclick: move |evt| {
+                    if let Some(handler) = &onclick {
+                        handler.call(evt);
+                    }
+                },
+                {card_content}
+            }
         }
     } else {
-        card_content
+        // cuando no hay ruta, simplemente envolver el contenido en un div que pueda recibir onclick
+        if let Some(handler) = onclick {
+            rsx! {
+                div { onclick: move |evt| handler.call(evt), {card_content} }
+            }
+        } else {
+            card_content
+        }
     }
 }
 
 #[component]
-pub fn Card(
-    children: Element,
-    #[props(default = "".to_string())] class: String,
-) -> Element {
+pub fn Card(children: Element, #[props(default = "".to_string())] class: String) -> Element {
     rsx! {
         div { class: "rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm {class}",
             {children}
@@ -48,20 +66,14 @@ pub fn Card(
 }
 
 #[component]
-pub fn CardHeader(
-    children: Element,
-    #[props(default = "".to_string())] class: String,
-) -> Element {
+pub fn CardHeader(children: Element, #[props(default = "".to_string())] class: String) -> Element {
     rsx! {
         div { class: "flex flex-col space-y-1.5 p-6 {class}", {children} }
     }
 }
 
 #[component]
-pub fn CardTitle(
-    children: Element,
-    #[props(default = "".to_string())] class: String,
-) -> Element {
+pub fn CardTitle(children: Element, #[props(default = "".to_string())] class: String) -> Element {
     rsx! {
         h3 { class: "text-2xl font-semibold leading-none tracking-tight text-zinc-950 dark:text-zinc-50 {class}",
             {children}
@@ -70,10 +82,7 @@ pub fn CardTitle(
 }
 
 #[component]
-pub fn CardContent(
-    children: Element,
-    #[props(default = "".to_string())] class: String,
-) -> Element {
+pub fn CardContent(children: Element, #[props(default = "".to_string())] class: String) -> Element {
     rsx! {
         div { class: "p-6 pt-0 {class}", {children} }
     }
