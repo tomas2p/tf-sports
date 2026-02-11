@@ -1,6 +1,7 @@
 use crate::components::ui::{Container, Section, Separator};
 use crate::components::{EmptyState, FilterConfig, FilterSection, PageHeader, Pagination};
 use crate::models::Renderable;
+use crate::utils::pagination_filters::DEFAULT_ITEMS_PER_PAGE;
 use dioxus::prelude::*;
 
 #[component]
@@ -14,6 +15,7 @@ pub fn PaginatedListing<T: Renderable>(
     #[props(default = None)] current_page: Option<Signal<usize>>,
     #[props(default = 1)] total_pages: usize,
     #[props(default = "grid gap-6 md:grid-cols-2 lg:grid-cols-3".to_string())] grid_classes: String,
+    #[props(default = DEFAULT_ITEMS_PER_PAGE)] items_per_page: usize,
     #[props(default = None)] content: Option<Element>,
     show_empty_state: bool,
 ) -> Element {
@@ -28,6 +30,9 @@ pub fn PaginatedListing<T: Renderable>(
     // Asegurar que siempre tenemos una señal de página: usar la proporcionada o crear una local por defecto
     let internal_current = use_signal(|| 1usize);
     let current_page_signal = current_page.clone().unwrap_or(internal_current);
+    // Calcular offset fuera de `rsx!` para usarlo dentro del macro sin crear un bloque Rust
+    let current = current_page_signal();
+    let offset = current.saturating_sub(1).saturating_mul(items_per_page);
 
     rsx! {
       Container {
@@ -68,8 +73,8 @@ pub fn PaginatedListing<T: Renderable>(
               {slot}
             } else if let Some(items_sig) = &paginated_items {
               div { class: "{grid_classes}",
-                for (index , item) in items_sig().into_iter().enumerate() {
-                  {item.render(index)}
+                for (index, item) in items_sig().into_iter().enumerate() {
+                  {item.render(offset + index)}
                 }
               }
             }

@@ -2,6 +2,7 @@ use crate::Route;
 use crate::components::ui::*;
 // EventoData import removed; use `get_eventos()` helper instead when needed
 use crate::data::get_eventos;
+use crate::models::strip_html;
 use dioxus::prelude::*;
 
 
@@ -126,7 +127,7 @@ pub fn Event(id: i32) -> Element {
                                 "Descripción del Evento"
                             }
                             p { class: "text-zinc-600 dark:text-zinc-400 leading-relaxed",
-                                "{evt.evento_descripcion}"
+                                "{strip_html(&evt.evento_descripcion)}"
                             }
 
                             if !evt.evento_url.is_empty() {

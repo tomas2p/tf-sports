@@ -10,41 +10,181 @@ pub struct DeporteInfo {
 
 /// Lista de todos los deportes disponibles (ordenados por longitud de keyword para matching específico)
 pub const DEPORTES: &[DeporteInfo] = &[
-    DeporteInfo { nombre: "Campo a Través", emoji: "🏃", keyword: "campo a través" },
-    DeporteInfo { nombre: "Marcha Nórdica", emoji: "🥾", keyword: "marcha nórdica" },
-    DeporteInfo { nombre: "Natación Artística", emoji: "🏊‍♀️", keyword: "natación artística" },
-    DeporteInfo { nombre: "Patinaje Artístico", emoji: "⛸️", keyword: "patinaje artístico" },
-    DeporteInfo { nombre: "Carrera de Obstáculos", emoji: "🏃‍♂️", keyword: "carrera de obstáculos" },
-    DeporteInfo { nombre: "Tenis de Mesa", emoji: "🏓", keyword: "tenis de mesa" },
-    DeporteInfo { nombre: "Bola Canaria", emoji: "🎳", keyword: "bola canaria" },
-    DeporteInfo { nombre: "Lucha Canaria", emoji: "🤼", keyword: "lucha canaria" },
-    DeporteInfo { nombre: "Paddle Surf", emoji: "🏄", keyword: "paddle surf" },
-    DeporteInfo { nombre: "Vóley-Playa", emoji: "🏐", keyword: "vóley-playa" },
-    DeporteInfo { nombre: "Senderismo", emoji: "🥾", keyword: "senderismo" },
-    DeporteInfo { nombre: "Atletismo", emoji: "🏃", keyword: "atletismo" },
-    DeporteInfo { nombre: "Balonmano", emoji: "🤾", keyword: "balonmano" },
-    DeporteInfo { nombre: "Baloncesto", emoji: "🏀", keyword: "baloncesto" },
-    DeporteInfo { nombre: "Bádminton", emoji: "🏸", keyword: "bádminton" },
-    DeporteInfo { nombre: "Ciclismo", emoji: "🚴", keyword: "ciclismo" },
-    DeporteInfo { nombre: "Frontenis", emoji: "🎾", keyword: "frontenis" },
-    DeporteInfo { nombre: "Natación", emoji: "🏊", keyword: "natación" },
-    DeporteInfo { nombre: "Orientación", emoji: "🧭", keyword: "orientación" },
-    DeporteInfo { nombre: "Salvamento", emoji: "🏊‍♂️", keyword: "salvamento" },
-    DeporteInfo { nombre: "Taekwondo", emoji: "🥋", keyword: "taekwondo" },
-    DeporteInfo { nombre: "Triatlón", emoji: "🏊‍♂️", keyword: "triatlón" },
-    DeporteInfo { nombre: "Voleibol", emoji: "🏐", keyword: "voleibol" },
-    DeporteInfo { nombre: "Waterpolo", emoji: "🤽", keyword: "waterpolo" },
-    DeporteInfo { nombre: "Ajedrez", emoji: "♟️", keyword: "ajedrez" },
-    DeporteInfo { nombre: "Béisbol", emoji: "⚾", keyword: "béisbol" },
-    DeporteInfo { nombre: "Fútbol", emoji: "⚽", keyword: "fútbol" },
-    DeporteInfo { nombre: "Kayak", emoji: "🛶", keyword: "kayak" },
-    DeporteInfo { nombre: "Rugby", emoji: "🏉", keyword: "rugby" },
-    DeporteInfo { nombre: "Surf", emoji: "🏄", keyword: "surf" },
-    DeporteInfo { nombre: "Taichí", emoji: "🧘", keyword: "taichí" },
-    DeporteInfo { nombre: "Trail", emoji: "🏃‍♀️", keyword: "trail" },
-    DeporteInfo { nombre: "Yoga", emoji: "🧘‍♀️", keyword: "yoga" },
-    DeporteInfo { nombre: "Judo", emoji: "🥋", keyword: "judo" },
-    DeporteInfo { nombre: "Lucha", emoji: "🤼", keyword: "lucha" },
+    DeporteInfo {
+        nombre: "Campo a Través",
+        emoji: "🏃",
+        keyword: "campo a través",
+    },
+    DeporteInfo {
+        nombre: "Marcha Nórdica",
+        emoji: "🥾",
+        keyword: "marcha nórdica",
+    },
+    DeporteInfo {
+        nombre: "Natación Artística",
+        emoji: "🏊‍♀️",
+        keyword: "natación artística",
+    },
+    DeporteInfo {
+        nombre: "Patinaje Artístico",
+        emoji: "⛸️",
+        keyword: "patinaje artístico",
+    },
+    DeporteInfo {
+        nombre: "Carrera de Obstáculos",
+        emoji: "🏃‍♂️",
+        keyword: "carrera de obstáculos",
+    },
+    DeporteInfo {
+        nombre: "Tenis de Mesa",
+        emoji: "🏓",
+        keyword: "tenis de mesa",
+    },
+    DeporteInfo {
+        nombre: "Bola Canaria",
+        emoji: "🎳",
+        keyword: "bola canaria",
+    },
+    DeporteInfo {
+        nombre: "Lucha Canaria",
+        emoji: "🤼",
+        keyword: "lucha canaria",
+    },
+    DeporteInfo {
+        nombre: "Paddle Surf",
+        emoji: "🏄",
+        keyword: "paddle surf",
+    },
+    DeporteInfo {
+        nombre: "Vóley-Playa",
+        emoji: "🏐",
+        keyword: "vóley-playa",
+    },
+    DeporteInfo {
+        nombre: "Senderismo",
+        emoji: "🥾",
+        keyword: "senderismo",
+    },
+    DeporteInfo {
+        nombre: "Atletismo",
+        emoji: "🏃",
+        keyword: "atletismo",
+    },
+    DeporteInfo {
+        nombre: "Balonmano",
+        emoji: "🤾",
+        keyword: "balonmano",
+    },
+    DeporteInfo {
+        nombre: "Baloncesto",
+        emoji: "🏀",
+        keyword: "baloncesto",
+    },
+    DeporteInfo {
+        nombre: "Bádminton",
+        emoji: "🏸",
+        keyword: "bádminton",
+    },
+    DeporteInfo {
+        nombre: "Ciclismo",
+        emoji: "🚴",
+        keyword: "ciclismo",
+    },
+    DeporteInfo {
+        nombre: "Frontenis",
+        emoji: "🎾",
+        keyword: "frontenis",
+    },
+    DeporteInfo {
+        nombre: "Natación",
+        emoji: "🏊",
+        keyword: "natación",
+    },
+    DeporteInfo {
+        nombre: "Orientación",
+        emoji: "🧭",
+        keyword: "orientación",
+    },
+    DeporteInfo {
+        nombre: "Salvamento",
+        emoji: "🏊‍♂️",
+        keyword: "salvamento",
+    },
+    DeporteInfo {
+        nombre: "Taekwondo",
+        emoji: "🥋",
+        keyword: "taekwondo",
+    },
+    DeporteInfo {
+        nombre: "Triatlón",
+        emoji: "🏊‍♂️",
+        keyword: "triatlón",
+    },
+    DeporteInfo {
+        nombre: "Voleibol",
+        emoji: "🏐",
+        keyword: "voleibol",
+    },
+    DeporteInfo {
+        nombre: "Waterpolo",
+        emoji: "🤽",
+        keyword: "waterpolo",
+    },
+    DeporteInfo {
+        nombre: "Ajedrez",
+        emoji: "♟️",
+        keyword: "ajedrez",
+    },
+    DeporteInfo {
+        nombre: "Béisbol",
+        emoji: "⚾",
+        keyword: "béisbol",
+    },
+    DeporteInfo {
+        nombre: "Fútbol",
+        emoji: "⚽",
+        keyword: "fútbol",
+    },
+    DeporteInfo {
+        nombre: "Kayak",
+        emoji: "🛶",
+        keyword: "kayak",
+    },
+    DeporteInfo {
+        nombre: "Rugby",
+        emoji: "🏉",
+        keyword: "rugby",
+    },
+    DeporteInfo {
+        nombre: "Surf",
+        emoji: "🏄",
+        keyword: "surf",
+    },
+    DeporteInfo {
+        nombre: "Taichí",
+        emoji: "🧘",
+        keyword: "taichí",
+    },
+    DeporteInfo {
+        nombre: "Trail",
+        emoji: "🏃‍♀️",
+        keyword: "trail",
+    },
+    DeporteInfo {
+        nombre: "Yoga",
+        emoji: "🧘‍♀️",
+        keyword: "yoga",
+    },
+    DeporteInfo {
+        nombre: "Judo",
+        emoji: "🥋",
+        keyword: "judo",
+    },
+    DeporteInfo {
+        nombre: "Lucha",
+        emoji: "🤼",
+        keyword: "lucha",
+    },
 ];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -67,11 +207,15 @@ pub struct Evento {
 impl Evento {
     pub fn get_badge_variant(&self) -> &'static str {
         use chrono::NaiveDateTime;
-        
-        if let Ok(fecha_inicio) = NaiveDateTime::parse_from_str(&self.evento_fecha_inicio, "%Y-%m-%d %H:%M:%S") {
+
+        if let Ok(fecha_inicio) =
+            NaiveDateTime::parse_from_str(&self.evento_fecha_inicio, "%Y-%m-%d %H:%M:%S")
+        {
             let now = chrono::Local::now().naive_local();
-            
-            if let Ok(fecha_fin) = NaiveDateTime::parse_from_str(&self.evento_fecha_fin, "%Y-%m-%d %H:%M:%S") {
+
+            if let Ok(fecha_fin) =
+                NaiveDateTime::parse_from_str(&self.evento_fecha_fin, "%Y-%m-%d %H:%M:%S")
+            {
                 if now >= fecha_inicio && now <= fecha_fin {
                     return "EN VIVO";
                 } else if now > fecha_fin {
@@ -79,24 +223,26 @@ impl Evento {
                 }
             }
         }
-        
+
         "PRÓXIMO"
     }
-    
+
     pub fn format_fecha(&self) -> String {
         use chrono::NaiveDateTime;
-        
-        if let Ok(fecha) = NaiveDateTime::parse_from_str(&self.evento_fecha_inicio, "%Y-%m-%d %H:%M:%S") {
+
+        if let Ok(fecha) =
+            NaiveDateTime::parse_from_str(&self.evento_fecha_inicio, "%Y-%m-%d %H:%M:%S")
+        {
             fecha.format("%d/%m/%Y • %H:%M hrs").to_string()
         } else {
             self.evento_fecha_inicio.clone()
         }
     }
-    
+
     pub fn get_deporte(&self) -> String {
         let nombre = self.evento_nombre.to_lowercase();
         let desc = self.evento_descripcion.to_lowercase();
-        
+
         // Buscar en nombre primero, luego en descripción
         DEPORTES
             .iter()
@@ -104,11 +250,11 @@ impl Evento {
             .map(|d| d.nombre.to_string())
             .unwrap_or_else(|| "Varios".to_string())
     }
-    
+
     pub fn get_deporte_emoji(&self) -> &'static str {
         let nombre = self.evento_nombre.to_lowercase();
         let desc = self.evento_descripcion.to_lowercase();
-        
+
         DEPORTES
             .iter()
             .find(|d| nombre.contains(d.keyword) || desc.contains(d.keyword))
@@ -173,10 +319,10 @@ pub struct Geometry {
 }
 
 // Trait y wrappers para renderizado genérico
-use dioxus::prelude::*;
-use crate::components::{EventCard, CategoryCard};
 use crate::components::event_card::LayoutVariant;
+use crate::components::{CategoryCard, EventCard};
 use crate::Route;
+use dioxus::prelude::*;
 
 /// Trait para tipos que pueden ser renderizados en PaginatedListing
 pub trait Renderable: Clone + PartialEq + 'static {
@@ -193,6 +339,14 @@ impl Renderable for Evento {
                 layout: LayoutVariant::Detailed,
             }
         }
+    }
+}
+
+// Implementación para pares (índice_original, Evento) para preservar el índice
+impl Renderable for (usize, Evento) {
+    fn render(&self, _index: usize) -> Element {
+        let (orig_idx, evento) = self.clone();
+        evento.render(orig_idx)
     }
 }
 
@@ -259,4 +413,64 @@ impl Renderable for InstalacionItem {
             }
         }
     }
+}
+
+// Utilidades de texto usadas en las vistas: limpiar HTML y normalizar cadenas
+pub fn strip_html(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut in_tag = false;
+    for c in input.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out
+}
+
+pub fn normalize_text(input: &str) -> String {
+    // Quitar HTML primero, pasar a minúsculas y reemplazar acentos comunes
+    let stripped = strip_html(input).to_lowercase();
+
+    let mut mapped = String::with_capacity(stripped.len());
+    for ch in stripped.chars() {
+        let ch = match ch {
+            'á' | 'Á' => 'a',
+            'é' | 'É' => 'e',
+            'í' | 'Í' => 'i',
+            'ó' | 'Ó' => 'o',
+            'ú' | 'Ú' => 'u',
+            'ü' | 'Ü' => 'u',
+            'ñ' | 'Ñ' => 'n',
+            c => c,
+        };
+
+        if ch.is_alphanumeric() {
+            mapped.push(ch);
+        } else if ch.is_whitespace() {
+            mapped.push(' ');
+        } else {
+            // reemplazar cualquier otro carácter por espacio para separar palabras
+            mapped.push(' ');
+        }
+    }
+
+    // Colapsar espacios múltiples
+    let mut out = String::with_capacity(mapped.len());
+    let mut prev_space = false;
+    for c in mapped.chars() {
+        if c.is_whitespace() {
+            if !prev_space {
+                out.push(' ');
+                prev_space = true;
+            }
+        } else {
+            out.push(c);
+            prev_space = false;
+        }
+    }
+
+    out.trim().to_string()
 }
