@@ -14,6 +14,9 @@ pub struct CategoryCardProps {
     /// Optional description text to show at the bottom
     #[props(default = None)]
     pub description: Option<String>,
+    /// Optional footer element for custom badges or controls
+    #[props(default = None)]
+    pub footer: Option<Element>,
 }
 
 /// A reusable card component for displaying categories with emoji, title, badge and description
@@ -24,7 +27,7 @@ pub fn CategoryCard(props: CategoryCardProps) -> Element {
             "{emoji}"
         }
     });
-    
+
     rsx! {
         BaseCard { hover_class: "hover:shadow-lg".to_string(), header_visual,
             CardHeader {
@@ -36,6 +39,10 @@ pub fn CategoryCard(props: CategoryCardProps) -> Element {
                     p { class: "text-sm text-zinc-600 dark:text-zinc-400 mt-3 line-clamp-2",
                         "{desc}"
                     }
+                }
+
+                if let Some(footer) = &props.footer {
+                    div { class: "mt-3", {footer.clone()} }
                 }
             }
         }

@@ -734,8 +734,20 @@
     border-color: var(--color-zinc-900);
   }
 
+  .border-none,
+  .dark\:border-none {
+    border-width: 0 !important;
+    border-color: transparent !important;
+  }
+
   .bg-white {
     background-color: var(--color-white);
+  }
+
+  .bg-none,
+  .dark\:bg-none {
+    background-image: none !important;
+    background-color: transparent !important;
   }
 
   .bg-white\/80 {
@@ -775,6 +787,10 @@
   .to-zinc-200 {
     --tw-gradient-to: var(--color-zinc-200);
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+
+  .p-0 {
+    padding: 0% !important;
   }
 
   .p-3 {

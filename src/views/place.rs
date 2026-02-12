@@ -1,11 +1,11 @@
 use crate::components::ui::*;
-use crate::components::{Breadcrumb, breadcrumb_items};
-use crate::Route;
+use crate::components::{breadcrumb_items, Breadcrumb, CategoryCard};
+use crate::data::{get_espacios, get_instalaciones};
+use crate::models::get_deporte_info;
 use crate::models::EspacioDeportivo;
-use crate::data::{get_instalaciones, get_espacios};
+use crate::Route;
 use dioxus::prelude::*;
 use std::collections::HashMap;
-
 
 #[component]
 pub fn Place(id: i64) -> Element {
@@ -116,15 +116,18 @@ pub fn Place(id: i64) -> Element {
                                 .collect();
                             actividades.sort();
                             rsx! {
-                                Card {
-                                    CardHeader {
+                                Card { 
+                                    class: "border-none dark:border-none bg-none dark:bg-none",
+                                    CardHeader { 
+                                        class:"p-0 mb-4",
                                         div { class: "flex items-center justify-between",
                                             CardTitle { "Espacios Deportivos" }
                                             Badge { variant: BadgeVariant::Outline, "{espacios_list.len()} espacios" }
                                         }
                                     }
                                     CardContent {
-                                        div { class: "space-y-8",
+                                        class:"p-0",
+                                        div { class: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
                                             for actividad in actividades {
                                                 {
                                                     let espacios_actividad = espacios_por_actividad.get(&actividad).unwrap();
@@ -169,97 +172,34 @@ pub fn Place(id: i64) -> Element {
                                                                 .map(|i| i.to_lowercase().contains("nocturno"))
                                                                 .unwrap_or(false)
                                                         });
-                                                    let mut grupos: HashMap<String, Vec<EspacioDeportivo>> = HashMap::new();
-                                                    for espacio in espacios_actividad.iter() {
-                                                        let base = espacio
-                                                            .espacio_nombre
-                                                            .trim()
-                                                            .trim_end_matches(|c: char| c.is_ascii_digit() || c == ' ')
-                                                            .to_string();
-                                                        grupos.entry(base).or_insert_with(Vec::new).push(espacio.clone());
-                                                    }
-                                                    let mut nombres_base: Vec<String> = grupos.keys().cloned().collect();
-                                                    nombres_base.sort();
-                                                    let mut nombres_espacios: Vec<String> = Vec::new();
-                                                    for base in nombres_base.iter() {
-                                                        let grupo = grupos.get(base).unwrap();
-                                                        let mut numeros: Vec<String> = grupo
-                                                            .iter()
-                                                            .filter_map(|e| {
-                                                                let nombre = e.espacio_nombre.trim();
-                                                                nombre
-                                                                    .strip_prefix(base)
-                                                                    .map(|s| s.trim())
-                                                                    .filter(|s| !s.is_empty())
-                                                                    .map(|n| n.to_string())
-                                                            })
-                                                            .collect();
-                                                        numeros.sort();
-                                                        let nombre_mostrar = if !numeros.is_empty() {
-                                                            format!("{} {}", base, numeros.join(", "))
-                                                        } else {
-                                                            base.clone()
-                                                        };
-                                                        nombres_espacios.push(nombre_mostrar);
-                                                    }
+                                                    let badge_text = format!(
+                                                        "{} espacio{}",
+                                                        espacios_actividad.len(),
+                                                        if espacios_actividad.len() == 1 { "" } else { "s" },
+                                                    );
+
                                                     rsx! {
-                                                        div { class: "border-l-4 border-zinc-300 dark:border-zinc-700 pl-4 py-3 space-y-3",
-                                                            div { class: "flex items-center gap-3",
-                                                                h3 { class: "text-lg font-bold text-zinc-950 dark:text-zinc-50", "{actividad}" }
-                                                                Badge { variant: BadgeVariant::Secondary,
-                                                                    {
-                                                                        format!(
-                                                                            "{} espacio{}",
-                                                                            espacios_actividad.len(),
-                                                                            if espacios_actividad.len() == 1 { "" } else { "s" },
-                                                                        )
+                                                        CategoryCard {
+                                                            emoji: Some(get_deporte_info(&actividad).map_or("🏆", |d| d.emoji).to_string()),
+                                                            title: actividad.clone(),
+                                                            badge_text: badge_text.clone(),
+                                                            description: Some(tipos.join(", ")),
+                                                            footer: Some(rsx!{
+                                                                div { class: "flex flex-wrap gap-2 justify-center",
+                                                                    for pav in pavimentos.iter() {
+                                                                        Badge { variant: BadgeVariant::Default, "{pav}" }
+                                                                    }
+                                                                    if tiene_cubierto {
+                                                                        Badge { variant: BadgeVariant::Secondary, "🏠 Cubierto" }
+                                                                    }
+                                                                    if tiene_abierto {
+                                                                        Badge { variant: BadgeVariant::Outline, "☀️ Abierto" }
+                                                                    }
+                                                                    if tiene_nocturno {
+                                                                        Badge { variant: BadgeVariant::Secondary, "🌙 Nocturno" }
                                                                     }
                                                                 }
-                                                            }
-
-                                                            div { class: "space-y-2",
-                                                                if !tipos.is_empty() {
-                                                                    div { class: "flex gap-2 items-center",
-                                                                        span { class: "text-zinc-600 dark:text-zinc-400 text-sm min-w-[100px]",
-                                                                            "Tipo:"
-                                                                        }
-                                                                        span { class: "text-zinc-950 dark:text-zinc-50 text-sm", "{tipos.join(\", \")}" }
-                                                                    }
-                                                                }
-
-                                                                if !pavimentos.is_empty() {
-                                                                    div { class: "flex gap-2 items-center",
-                                                                        span { class: "text-zinc-600 dark:text-zinc-400 text-sm min-w-[100px]",
-                                                                            "Pavimento:"
-                                                                        }
-                                                                        div { class: "flex flex-wrap gap-1",
-                                                                            for pav in pavimentos.iter() {
-                                                                                Badge { variant: BadgeVariant::Default, "{pav}" }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-
-                                                                div { class: "flex gap-2 items-center flex-wrap",
-                                                                    span { class: "text-zinc-600 dark:text-zinc-400 text-sm min-w-[100px]", "Características:" }
-                                                                    div { class: "flex flex-wrap gap-2",
-                                                                        if tiene_cubierto {
-                                                                            Badge { variant: BadgeVariant::Secondary, "🏠 Cubierto" }
-                                                                        }
-                                                                        if tiene_abierto {
-                                                                            Badge { variant: BadgeVariant::Outline, "☀️ Abierto" }
-                                                                        }
-                                                                        if tiene_nocturno {
-                                                                            Badge { variant: BadgeVariant::Secondary, "🌙 Nocturno" }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            div { class: "pt-2",
-                                                                span { class: "text-zinc-600 dark:text-zinc-400 text-sm block mb-1", "Espacios:" }
-                                                                p { class: "text-zinc-950 dark:text-zinc-50 text-sm", "{nombres_espacios.join(\" • \")}" }
-                                                            }
+                                                            })
                                                         }
                                                     }
                                                 }

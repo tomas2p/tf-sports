@@ -187,6 +187,12 @@ pub const DEPORTES: &[DeporteInfo] = &[
     },
 ];
 
+pub fn get_deporte_info(nombre: &str) -> Option<&'static DeporteInfo> {
+    DEPORTES
+        .iter()
+        .find(|d| d.nombre.eq_ignore_ascii_case(nombre))
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EventoData {
     pub eventos: Vec<Evento>,
