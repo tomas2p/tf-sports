@@ -30,8 +30,8 @@ pub fn Map(
       var lat = {lat};
       var lon = {lon};
       var z = {z};
-      var lightUrl = 'https://tiles.stadiamaps.com/tiles/alidade/{z}/{{x}}/{{y}}.png';
-      var darkUrl = 'https://tiles.stadiamaps.com/tiles/alidade_dark/{z}/{{x}}/{{y}}.png';
+      var lightUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{{x}}/{{y}}.png';
+      var darkUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{{x}}/{{y}}.png';
       var attr = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &amp; <a href="https://openmaptiles.org/">OpenMapTiles</a> &amp; <a href="https://openstreetmap.org">OSM</a>';
 
       var map = L.map('map', {{ center: [lat, lon], zoom: z, zoomControl: false }});
