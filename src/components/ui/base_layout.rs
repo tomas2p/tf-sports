@@ -1,4 +1,5 @@
 use crate::components::ui::*;
+use crate::components::MetaTags;
 use crate::components::PageHeader;
 use dioxus::prelude::*;
 
@@ -15,6 +16,9 @@ pub fn BaseLayout(
     #[props(default = "".to_string())] class: String,
 ) -> Element {
     rsx! {
+            // Meta tags for SEO: title/description/og/twitter. Pages can pass subtitle as description.
+            MetaTags { title: title.clone(), description: subtitle.clone(), url: None, image: None }
+
             crate::components::ui::Container {
                 crate::components::ui::Section {
                     // Encabezado de página: reutilizar `PageHeader` para mantener consistencia

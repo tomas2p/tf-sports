@@ -1,30 +1,34 @@
-use crate::Route;
-use crate::components::ui::*;
-use crate::components::{Calendar, EventCard, EmptyState};
 use crate::components::event_card::LayoutVariant;
-use crate::models::Evento;
+use crate::components::ui::*;
+use crate::components::{Calendar, EmptyState, EventCard};
 use crate::data::get_eventos;
+use crate::models::Evento;
 use crate::utils::date_utils::fecha_en_espanol;
-use dioxus::prelude::*;
+use crate::Route;
 use chrono::Datelike;
-
+use dioxus::prelude::*;
 
 /// The Home page component that will be rendered when the current route is `[Route::Home]`
 #[component]
 pub fn Home() -> Element {
-    let eventos_data = use_memo(move || get_eventos().clone());
-    
-    let selected_date = use_signal(|| None::<chrono::NaiveDate>);
+    let eventos_data = use_memo(move || get_eventos());
+
     let today = chrono::Local::now().date_naive();
+    let selected_date = use_signal(|| Some(today));
     let days_from_monday = today.weekday().num_days_from_monday();
     let monday = today - chrono::Duration::days(days_from_monday as i64);
     let current_week_start = use_signal(move || monday);
-    
+
+    let eventos_signal = use_signal(|| eventos_data().eventos.clone());
+
     let eventos_filtrados = use_memo(move || {
-        let data = eventos_data();
-        data.eventos.into_iter().enumerate().collect::<Vec<_>>()
+        eventos_signal()
+            .iter()
+            .enumerate()
+            .map(|(i, e)| (i, e.clone()))
+            .collect::<Vec<_>>()
     });
-    
+
     let eventos_del_dia_info = use_memo(move || {
         if let Some(date) = selected_date() {
             let todos_eventos = eventos_filtrados();
@@ -63,7 +67,7 @@ pub fn Home() -> Element {
             None
         }
     });
-    
+
     rsx! {
         Container {
             Section {
@@ -102,7 +106,7 @@ pub fn Home() -> Element {
 
                 // Calendario semanal compacto
                 Calendar {
-                    eventos: eventos_filtrados().iter().map(|(_, e)| e.clone()).collect(),
+                    eventos: eventos_signal,
                     selected_date,
                     current_week_start,
                 }
@@ -114,7 +118,7 @@ pub fn Home() -> Element {
                             CardTitle { "Eventos del {fecha_en_espanol(date)}" }
                         }
                         CardContent {
-                            div { class: "grid gap-6 md:grid-cols-2 lg:grid-cols-{cols}",
+                            div { class: format!("grid gap-6 md:grid-cols-2 lg:grid-cols-{}", cols),
                                 if eventos_del_dia.is_empty() {
                                     div { class: "col-span-full",
                                         EmptyState {

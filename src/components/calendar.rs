@@ -1,42 +1,41 @@
 use crate::components::ui::*;
 use crate::models::Evento;
-use crate::utils::date_utils::{day_name_short_es};
+use crate::utils::date_utils::day_name_short_es;
+use chrono::{Datelike, Duration, NaiveDate};
 use dioxus::prelude::*;
-use chrono::{NaiveDate, Datelike, Duration};
 
 /// Componente de calendario semanal compacto
 #[component]
 pub fn Calendar(
-    eventos: Vec<Evento>,
+    eventos: Signal<Vec<Evento>>,
     selected_date: Signal<Option<NaiveDate>>,
     current_week_start: Signal<NaiveDate>,
 ) -> Element {
     let today = chrono::Local::now().date_naive();
-    
+
     // Calcular días de la semana (7 días desde current_week_start)
     let week_days: Vec<NaiveDate> = (0..7)
         .map(|i| current_week_start() + Duration::days(i))
         .collect();
-    
+
     // Agrupar eventos por fecha
     let eventos_por_fecha = use_memo(move || {
         let mut map: std::collections::HashMap<NaiveDate, usize> = std::collections::HashMap::new();
-        for evento in eventos.iter() {
-            if let Ok(fecha) = chrono::NaiveDateTime::parse_from_str(&evento.evento_fecha_inicio, "%Y-%m-%d %H:%M:%S") {
+        for evento in eventos().iter() {
+            if let Ok(fecha) = chrono::NaiveDateTime::parse_from_str(
+                &evento.evento_fecha_inicio,
+                "%Y-%m-%d %H:%M:%S",
+            ) {
                 let fecha_date = fecha.date();
                 *map.entry(fecha_date).or_insert(0) += 1;
             }
         }
         map
     });
-    
-    // Activar siempre el día actual como seleccionado si no hay selección
-    use_effect(move || {
-        if selected_date().is_none() {
-            selected_date.set(Some(today));
-        }
-    });
-    
+
+    // Nota: la selección inicial se debe manejar desde el componente padre
+    // para evitar avisos de hidratación; no forzamos selected_date aquí.
+
     let month_name = match current_week_start().month() {
         1 => "Enero",
         2 => "Febrero",
@@ -52,7 +51,7 @@ pub fn Calendar(
         12 => "Diciembre",
         _ => "",
     };
-    
+
     rsx! {
         Card { class: "mb-6",
             CardContent { class: "p-4",
@@ -63,6 +62,7 @@ pub fn Calendar(
                     }
                     div { class: "flex gap-1",
                         Button {
+                            aria_label: "Semana anterior",
                             variant: ButtonVariant::Ghost,
                             size: ButtonSize::Sm,
                             onclick: move |_| {
@@ -71,6 +71,7 @@ pub fn Calendar(
                             "←"
                         }
                         Button {
+                            aria_label: "Ir a hoy",
                             variant: ButtonVariant::Ghost,
                             size: ButtonSize::Sm,
                             onclick: move |_| {
@@ -83,6 +84,7 @@ pub fn Calendar(
                             "Hoy"
                         }
                         Button {
+                            aria_label: "Semana siguiente",
                             variant: ButtonVariant::Ghost,
                             size: ButtonSize::Sm,
                             onclick: move |_| {

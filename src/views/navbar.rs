@@ -14,10 +14,24 @@ use dioxus_free_icons::Icon;
 #[component]
 pub fn Navbar() -> Element {
     let mut theme = use_context::<Signal<Theme>>();
+    let mut show_skip = use_signal(|| false);
     let link_class = "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100";
 
     rsx! {
         div { class: "min-h-screen flex flex-col bg-white dark:bg-zinc-950",
+            // Skip link for keyboard users: hidden off-screen by default; shown when focused via events
+            a {
+                href: "#main-content",
+                aria_label: "Saltar al contenido",
+                onfocus: move |_| show_skip.set(true),
+                onblur: move |_| show_skip.set(false),
+                style: if show_skip() {
+                    "position:absolute; left:8px; top:8px; z-index:50; padding:8px 12px; background:#ffffff; color:#111827; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1);"
+                } else {
+                    "position:absolute; left:-9999px;"
+                },
+                "Saltar al contenido"
+            }
             nav { class: "sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-950/60",
                 div { class: "container mx-auto px-4 md:px-6 lg:px-8",
                     div { class: "flex h-16 items-center justify-between",
@@ -61,7 +75,7 @@ pub fn Navbar() -> Element {
                 }
             }
 
-            main { class: "flex-1 overflow-auto",
+            main { id: "main-content", class: "flex-1 overflow-auto",
                 Outlet::<Route> {}
             }
         }

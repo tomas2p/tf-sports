@@ -81,8 +81,8 @@ pub fn Map(
     let style = format!("border:0; display:block; height:{};", h);
 
     rsx! {
-        div { class: "overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm",
-                iframe { srcdoc: html, width: "100%", height: h, frame_border: "0", style: style }
-        }
+      div { class: "overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm",
+          iframe { title: "{title}", srcdoc: html, width: "100%", height: h, frame_border: "0", style: style }
+      }
     }
 }

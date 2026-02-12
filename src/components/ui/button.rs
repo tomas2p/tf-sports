@@ -17,13 +17,14 @@ pub enum ButtonSize {
 #[derive(PartialEq, Clone, Copy)]
 pub enum ButtonShape {
     Default,
-    Circular,
+    // Circular,
 }
 
 #[component]
 pub fn Button(
     children: Element,
     #[props(default=None)] is_icon: Option<bool>,
+    #[props(default=None)] aria_label: Option<String>,
     #[props(default = ButtonVariant::Default)] variant: ButtonVariant,
     #[props(default = ButtonSize::Default)] size: ButtonSize,
     #[props(default = ButtonShape::Default)] shape: ButtonShape,
@@ -50,12 +51,13 @@ pub fn Button(
 
     let shape_classes = match shape {
         ButtonShape::Default => "rounded-md",
-        ButtonShape::Circular => "rounded-full",
+        // ButtonShape::Circular => "rounded-full",
     };
 
     rsx! {
         button {
             class: "{base_classes} {variant_classes} {size_classes} {shape_classes} {class}",
+            aria_label: aria_label.clone().unwrap_or_default(),
             disabled,
             onclick: move |evt| {
                 if let Some(handler) = &onclick {

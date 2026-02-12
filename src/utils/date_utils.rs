@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, Datelike};
+use chrono::{Datelike, NaiveDate};
 
 /// Formatea una fecha en español, ejemplo: "lunes 3 de febrero"
 pub fn fecha_en_espanol(date: NaiveDate) -> String {
@@ -68,5 +68,38 @@ pub fn _month_name_es_lower(month: u32) -> &'static str {
         11 => "noviembre",
         12 => "diciembre",
         _ => "",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+
+    #[test]
+    fn test_fecha_en_espanol_basica() {
+        let date = NaiveDate::from_ymd_opt(2026, 2, 12).unwrap();
+        let s = fecha_en_espanol(date);
+        assert_eq!(s, "jueves 12 de Febrero");
+    }
+
+    #[test]
+    fn test_day_name_short() {
+        assert_eq!(day_name_short_es(chrono::Weekday::Mon), "Lun");
+        assert_eq!(day_name_short_es(chrono::Weekday::Sun), "Dom");
+    }
+
+    #[test]
+    fn test_month_name_edges() {
+        assert_eq!(month_name_es(1), "Enero");
+        assert_eq!(month_name_es(12), "Diciembre");
+        assert_eq!(month_name_es(0), "");
+    }
+
+    #[test]
+    fn test_parse_naive_datetime_format() {
+        let s = "2026-02-12 14:30:00";
+        let dt = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").unwrap();
+        assert_eq!(dt.date(), NaiveDate::from_ymd_opt(2026, 2, 12).unwrap());
     }
 }

@@ -5,6 +5,7 @@ use crate::Route;
 use crate::data::get_eventos;
 use crate::models::strip_html;
 use dioxus::prelude::*;
+use serde_json::json;
 
 #[component]
 pub fn Event(id: i32) -> Element {
@@ -43,6 +44,25 @@ pub fn Event(id: i32) -> Element {
                     (evt.evento_nombre.clone())
                 ),
             };
+
+            // Build JSON-LD for this event
+            let ld = json!({
+                "@context": "https://schema.org",
+                "@type": "Event",
+                "name": evt.evento_nombre.clone(),
+                "startDate": evt.evento_fecha_inicio.replace(" ", "T"),
+                "endDate": evt.evento_fecha_fin.replace(" ", "T"),
+                "description": strip_html(&evt.evento_descripcion),
+                "location": {
+                    "@type": "Place",
+                    "name": evt.evento_lugar.clone().unwrap_or_else(|| "Lugar por determinar".to_string()),
+                    "address": { "addressLocality": evt.municipio_nombre.clone().unwrap_or_default() }
+                },
+                "organizer": { "@type": "Organization", "name": evt.evento_organizador.clone() },
+                "url": evt.evento_url.clone()
+            });
+
+            let ld_json = serde_json::to_string(&ld).unwrap_or_default();
 
             rsx! {
                 BaseLayout {
@@ -92,6 +112,8 @@ pub fn Event(id: i32) -> Element {
                                     }
                                 }
                             }
+                                // JSON-LD for the event (in head)
+                                document::Script { r#type: "application/ld+json", "{ld_json}" }
 
                             Card {
                                 CardHeader {

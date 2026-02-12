@@ -269,6 +269,105 @@ impl Evento {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::{get_espacios, get_eventos, get_instalaciones};
+    use chrono::Local;
+
+    fn sample_event_with_dates(start: chrono::NaiveDateTime, end: chrono::NaiveDateTime) -> Evento {
+        Evento {
+            evento_nombre: "Evento Test Ciclismo".to_string(),
+            evento_url: "".to_string(),
+            evento_descripcion: "Prueba de ciclismo en ruta".to_string(),
+            evento_lugar: Some("Pista Municipal".to_string()),
+            municipio_nombre: Some("Tenerife".to_string()),
+            evento_organizador: "Org Test".to_string(),
+            evento_fecha_inicio: start.format("%Y-%m-%d %H:%M:%S").to_string(),
+            evento_fecha_fin: end.format("%Y-%m-%d %H:%M:%S").to_string(),
+        }
+    }
+
+    #[test]
+    fn test_get_badge_variant_states() {
+        let now = Local::now().naive_local();
+
+        // EN VIVO
+        let e_live = sample_event_with_dates(
+            now - chrono::Duration::hours(1),
+            now + chrono::Duration::hours(1),
+        );
+        assert_eq!(e_live.get_badge_variant(), "EN VIVO");
+
+        // FINALIZADO
+        let e_done = sample_event_with_dates(
+            now - chrono::Duration::days(2),
+            now - chrono::Duration::days(1),
+        );
+        assert_eq!(e_done.get_badge_variant(), "FINALIZADO");
+
+        // PRÓXIMO
+        let e_future = sample_event_with_dates(
+            now + chrono::Duration::days(1),
+            now + chrono::Duration::days(2),
+        );
+        assert_eq!(e_future.get_badge_variant(), "PRÓXIMO");
+    }
+
+    #[test]
+    fn test_format_fecha_valid_and_invalid() {
+        let now = Local::now().naive_local();
+        let e = sample_event_with_dates(now, now + chrono::Duration::hours(1));
+        let f = e.format_fecha();
+        assert!(f.contains("hrs"));
+
+        // invalid date string returns original string
+        let mut e_bad = e.clone();
+        e_bad.evento_fecha_inicio = "invalid-date".to_string();
+        assert_eq!(e_bad.format_fecha(), "invalid-date".to_string());
+    }
+
+    #[test]
+    fn test_get_deporte_and_emoji() {
+        let now = Local::now().naive_local();
+        let e = Evento {
+            evento_nombre: "Gran carrera de ciclismo ciudad".to_string(),
+            evento_url: "".to_string(),
+            evento_descripcion: "Competición de ciclismo".to_string(),
+            evento_lugar: None,
+            municipio_nombre: None,
+            evento_organizador: "Org".to_string(),
+            evento_fecha_inicio: now.format("%Y-%m-%d %H:%M:%S").to_string(),
+            evento_fecha_fin: (now + chrono::Duration::hours(2))
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string(),
+        };
+
+        assert_eq!(e.get_deporte(), "Ciclismo".to_string());
+        assert_eq!(e.get_deporte_emoji(), "🚴");
+    }
+
+    #[test]
+    fn test_get_deporte_info_lookup() {
+        let info = get_deporte_info("Atletismo");
+        assert!(info.is_some());
+        assert_eq!(info.unwrap().nombre, "Atletismo");
+    }
+
+    #[test]
+    fn test_data_loading_functions() {
+        // ensure they parse without panicking and return structures
+        let eventos = get_eventos();
+        assert!(!eventos.eventos.is_empty());
+
+        let inst = get_instalaciones();
+        assert!(!inst.features.is_empty());
+
+        let esp = get_espacios();
+        assert!(!esp.is_empty());
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EspacioDeportivo {
     pub instalacion_codigo: i64,

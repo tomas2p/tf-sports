@@ -88,6 +88,11 @@ fn App() -> Element {
 
     // The `rsx!` macro lets us define HTML inside of rust. It expands to an Element with all of our HTML inside.
     rsx! {
+        // Ensure document language is set early for SEO / a11y
+        document::Script {
+            "(function() {{ try {{ document.documentElement.lang = 'es'; }} catch(e) {{}} }})();"
+        }
+
         // Script para aplicar tema antes del render
         document::Script {
             "(function() {{ const theme = localStorage.getItem('theme'); console.log('Script inicial - tema:', theme); if (theme === 'dark') {{ console.log('Añadiendo clase dark'); document.documentElement.classList.add('dark'); }} }})();"

@@ -31,6 +31,8 @@ pub fn EventCard(
         LayoutVariant::Simple => None,
     };
 
+    let lugar_display = evento.evento_lugar.clone().unwrap_or_else(|| "Lugar por determinar".to_string());
+
     let overflow_hidden = matches!(layout, LayoutVariant::Detailed);
     // Obtener contexto global de breadcrumb (proporcionado en `App`)
     let mut breadcrumb_ctx =
@@ -95,7 +97,7 @@ pub fn EventCard(
                         div { class: "flex items-start gap-2",
                             span { class: "text-sm text-zinc-500 dark:text-zinc-500", "📍" }
                             p { class: "text-sm text-zinc-600 dark:text-zinc-400",
-                                "{evento.evento_lugar.as_ref().unwrap_or(&\"Lugar por determinar\".to_string()).clone()}"
+                                "{lugar_display}"
                                 if let Some(ref municipio) = evento.municipio_nombre {
                                     ", {municipio}"
                                 }
