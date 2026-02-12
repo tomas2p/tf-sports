@@ -72,6 +72,14 @@ pub fn Place(id: i64) -> Element {
                                 }
                             }
                         }
+                        // Mapa de la instalación
+                        Map {
+                            lat: feature.properties.latitud,
+                            lon: feature.properties.longitud,
+                            zoom: Some(15),
+                            height: Some("300px".to_string()),
+                            name: Some(feature.properties.instalacion_nombre.clone())
+                        }
                     }
                 },
 
@@ -116,9 +124,9 @@ pub fn Place(id: i64) -> Element {
                                 .collect();
                             actividades.sort();
                             rsx! {
-                                Card { 
+                                Card {
                                     class: "border-none dark:border-none bg-none dark:bg-none",
-                                    CardHeader { 
+                                    CardHeader {
                                         class:"p-0 mb-4",
                                         div { class: "flex items-center justify-between",
                                             CardTitle { "Espacios Deportivos" }
