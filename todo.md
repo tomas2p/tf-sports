@@ -1,6 +1,6 @@
 [x] - Soporte de iconos
 [-] - Refactorizar para simplificar código
-[ ] - Añadir más relaciones con deportes y eventos en lugares
+[-] - Añadir más relaciones con deportes y eventos en lugares
 [ ] - Mejorar landing (HOME) añadiendo más minisecciones de las otras funcionalidades
 [ ] - Añadir Icono de la app
 [x] - Mapa
