@@ -33,6 +33,7 @@ pub fn Place(id: i64) -> Element {
                 title: feature.properties.instalacion_nombre.clone(),
                 breadcrumb: rsx! { Breadcrumb { items: breadcrumb_items!( ("Inicio", Route::Home {}), ("Instalaciones", Route::Places {}), (feature.properties.instalacion_nombre.clone()) ) } },
                 subtitle: Some(format!("📍 {}", feature.properties.municipio_nombre.clone())),
+                hero: Some("🏟️".to_string()),
                 meta: rsx! {
                     div { class: "space-y-6",
                         MetaCard { title: "Información de Contacto".to_string(),
@@ -76,7 +77,7 @@ pub fn Place(id: i64) -> Element {
 
                 // Main content: espacios
                 div {
-                    Separator { class: "my-8" }
+                    // Separator { class: "vertical my-8" }
 
                     {
                         let espacios_list = espacios();

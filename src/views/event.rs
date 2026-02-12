@@ -1,11 +1,10 @@
-use crate::Route;
 use crate::components::ui::*;
-use crate::components::{Breadcrumb, breadcrumb_items};
+use crate::components::{breadcrumb_items, Breadcrumb};
+use crate::Route;
 // EventoData import removed; use `get_eventos()` helper instead when needed
 use crate::data::get_eventos;
 use crate::models::strip_html;
 use dioxus::prelude::*;
-
 
 #[component]
 pub fn Event(id: i32) -> Element {
@@ -25,16 +24,24 @@ pub fn Event(id: i32) -> Element {
                 "PRÓXIMO" => BadgeVariant::Secondary,
                 _ => BadgeVariant::Outline,
             };
-            
+
             // Si hay un breadcrumb parcial publicado (por ejemplo desde `Sport`), usarlo y
             // añadir el nombre del evento; si no, usar el breadcrumb por defecto (Eventos).
-            let breadcrumb_ctx = use_context::<Signal<Option<Vec<crate::components::breadcrumb::BreadcrumbItem>>>>();
+            let breadcrumb_ctx =
+                use_context::<Signal<Option<Vec<crate::components::breadcrumb::BreadcrumbItem>>>>();
             let breadcrumb_items_vec = match breadcrumb_ctx.read().clone() {
                 Some(mut v) => {
-                    v.push(crate::components::breadcrumb::BreadcrumbItem { label: evt.evento_nombre.clone(), route: None::<Route> });
+                    v.push(crate::components::breadcrumb::BreadcrumbItem {
+                        label: evt.evento_nombre.clone(),
+                        route: None::<Route>,
+                    });
                     v
                 }
-                None => breadcrumb_items!( ("Inicio", Route::Home {}), ("Eventos", Route::Events {}), (evt.evento_nombre.clone()) ),
+                None => breadcrumb_items!(
+                    ("Inicio", Route::Home {}),
+                    ("Eventos", Route::Events {}),
+                    (evt.evento_nombre.clone())
+                ),
             };
 
             rsx! {
@@ -47,11 +54,7 @@ pub fn Event(id: i32) -> Element {
                         evt.evento_lugar.as_ref().unwrap_or(&"Lugar por determinar".to_string())
                     )),
                     badge: rsx! { Badge { variant: badge_variant, "{evt.get_badge_variant()}" } },
-                    hero: rsx! {
-                        div { class: "relative h-48 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 rounded-lg mb-8 flex items-center justify-center overflow-hidden",
-                            span { class: "text-9xl", "{evt.get_deporte_emoji()}" }
-                        }
-                    },
+                    hero: Some(evt.get_deporte_emoji().to_string()),
                     meta: rsx! {
                         div { class: "space-y-6",
                             Card {
@@ -127,10 +130,10 @@ pub fn Event(id: i32) -> Element {
                             }
                         }
                     },
-                   
+
                     // Main content (children)
                     div { class: "space-y-4",
-                        Separator { class: "my-8" }
+                        // Separator { class: "my-8" }
 
                         h2 { class: "text-2xl font-semibold text-zinc-950 dark:text-zinc-50",
                             "Descripción del Evento"

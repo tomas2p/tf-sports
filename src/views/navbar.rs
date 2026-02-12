@@ -15,7 +15,6 @@ use dioxus_free_icons::Icon;
 pub fn Navbar() -> Element {
     let mut theme = use_context::<Signal<Theme>>();
     let link_class = "text-sm font-medium text-zinc-600 dark:text-zinc-400 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100";
-    let icon_class = "w-6 h-6 md:w-8 md:h-8 fill-current rounded-full";
 
     rsx! {
         div { class: "min-h-screen flex flex-col bg-white dark:bg-zinc-950",
@@ -48,12 +47,12 @@ pub fn Navbar() -> Element {
                             },
                             { if matches!(theme(), Theme::Dark) { rsx! {
                                 Icon {
-                                    class: "{icon_class}",
+                                    class: "icon",
                                     icon: FiSun,
                                 }
                             }} else { rsx! {
                                 Icon {
-                                    class: "{icon_class}",
+                                    class: "icon",
                                     icon: FiMoon,
                                 }
                             }} }

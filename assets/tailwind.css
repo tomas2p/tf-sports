@@ -44,6 +44,8 @@
     --text-5xl--line-height: 1;
     --text-6xl: 3.75rem;
     --text-6xl--line-height: 1;
+    --text-8xl: 6rem;
+    --text-8xl--line-height: 1;
     --text-9xl: 8rem;
     --text-9xl--line-height: 1;
     --font-weight-medium: 500;
@@ -230,6 +232,19 @@
     }
   }
 
+  /* w-6 h-6 md:w-8 md:h-8 fill-current rounded-full */
+  icon {
+    width: calc(var(--spacing) * 6);
+    height: calc(var(--spacing) * 6);
+    fill: currentcolor;
+    border-radius: calc(infinity * 1px);
+
+    @media (min-width: 768px) {
+      width: calc(var(--spacing) * 8);
+      height: calc(var(--spacing) * 8);
+    }
+  }
+
   textarea {
     resize: vertical;
   }
@@ -334,6 +349,10 @@
     @media (width >=96rem) {
       max-width: 96rem;
     }
+  }
+
+  .m-4 {
+    margin: calc(var(--spacing) * 4);
   }
 
   .mx-auto {
@@ -456,6 +475,28 @@
     height: 100%;
   }
 
+  .md\:h-full {
+    @media (min-width: 768px) {
+      height: 100%;
+    }
+  }
+
+  .md\:h-auto {
+    @media (min-width: 768px) {
+      height: auto;
+    }
+  }
+
+  .h-max {
+    height: max-content;
+  }
+
+  .md\:h-max {
+    @media (min-width: 768px) {
+      height: max-content;
+    }
+  }
+
   .h-px {
     height: 1px;
   }
@@ -480,6 +521,12 @@
     width: 100%;
   }
 
+  .md\:w-auto {
+    @media (min-width: 768px) {
+      width: auto;
+    }
+  }
+
   .max-w-2xl {
     max-width: var(--container-2xl);
   }
@@ -498,6 +545,10 @@
 
   .grid-cols-7 {
     grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .flex-1 {
+    flex: 1 1 0%;
   }
 
   .flex-col {
@@ -530,6 +581,12 @@
 
   .items-start {
     align-items: flex-start;
+  }
+
+  .md\:items-stretch {
+    @media (min-width: 768px) {
+      align-items: stretch;
+    }
   }
 
   .justify-between {
@@ -823,6 +880,11 @@
   .text-6xl {
     font-size: var(--text-6xl);
     line-height: var(--tw-leading, var(--text-6xl--line-height));
+  }
+
+  .text-8xl {
+    font-size: var(--text-8xl);
+    line-height: var(--tw-leading, var(--text-8xl--line-height));
   }
 
   .text-9xl {
@@ -1133,6 +1195,18 @@
     }
   }
 
+  .md\:p-5 {
+    @media (width >=48rem) {
+      padding: calc(var(--spacing) * 5);
+    }
+  }
+
+  .md\:mx-2 {
+    @media (width >=48rem) {
+      margin-inline: calc(var(--spacing) * 2);
+    }
+  }
+
   .md\:px-6 {
     @media (width >=48rem) {
       padding-inline: calc(var(--spacing) * 6);
@@ -1156,6 +1230,12 @@
     @media (width >=48rem) {
       font-size: var(--text-5xl);
       line-height: var(--tw-leading, var(--text-5xl--line-height));
+    }
+  }
+
+  .md\:aspect-square {
+    @media (width >=48rem) {
+      aspect-ratio: 1 / 1;
     }
   }
 

@@ -1,3 +1,4 @@
+use crate::components::PageHeader;
 use dioxus::prelude::*;
 
 #[component]
@@ -5,7 +6,7 @@ pub fn BaseLayout(
     title: String,
     #[props(default = None)] subtitle: Option<String>,
     breadcrumb: Option<Element>,
-    #[props(default = None)] hero: Option<Element>,
+    #[props(default = None)] hero: Option<String>,
     #[props(default = None)] badge: Option<Element>,
     #[props(default = None)] meta: Option<Element>,
     #[props(default = None)] actions: Option<Element>,
@@ -15,25 +16,22 @@ pub fn BaseLayout(
     rsx! {
         crate::components::ui::Container {
             crate::components::ui::Section {
-                // Breadcrumb (optional) + Header: badge + title + actions
-                if let Some(bc) = breadcrumb {
-                    div { class: "mb-2", {bc} }
-                }
-
-                div { class: "space-y-4 mt-2",
-                    div { class: "flex items-start justify-between gap-4",
-                        div { class: "flex-1",
-                            if let Some(b) = badge { div { class: "mb-2", {b} } }
-                            h1 { class: "text-4xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50", "{title}" }
-                            if let Some(sub) = subtitle {
-                                p { class: "text-lg text-zinc-600 dark:text-zinc-400", "{sub}" }
-                            }
-                        }
-                        if let Some(act) = actions { div { {act} } }
+                // Encabezado de página: reutilizar `PageHeader` para mantener consistencia
+                // Usar `md:items-stretch` para que el hero tenga la misma altura que el PageHeader
+                div { class: "flex flex-col md:flex-row gap-4 justify-between items-start md:items-stretch",
+                    PageHeader {
+                        title: title.clone(),
+                        description: subtitle.clone(),
+                        breadcrumb,
+                        badge,
+                        actions,
                     }
 
                     if let Some(h) = hero {
-                        div { class: "mt-4 rounded-lg overflow-hidden", {h} }
+                        // Mobile: full width (w-full) and fixed height; md+: match PageHeader height and keep aspect square
+                        div { class: "relative w-full h-48 md:h-auto md:w-auto md:p-5 md:aspect-square bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 rounded-lg flex items-center justify-center overflow-hidden",
+                            span { class: "text-6xl md:aspect-square", "{h}" }
+                        }
                     }
                 }
 
