@@ -30,8 +30,8 @@ pub fn Map(
       var lat = {lat};
       var lon = {lon};
       var z = {z};
-      var lightUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{{x}}/{{y}}.png';
-      var darkUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{{x}}/{{y}}.png';
+      var lightUrl = 'https://tiles.stadiamaps.com/tiles/alidade/{z}/{{x}}/{{y}}.png';
+      var darkUrl = 'https://tiles.stadiamaps.com/tiles/alidade_dark/{z}/{{x}}/{{y}}.png';
       var attr = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &amp; <a href="https://openmaptiles.org/">OpenMapTiles</a> &amp; <a href="https://openstreetmap.org">OSM</a>';
 
       var map = L.map('map', {{ center: [lat, lon], zoom: z, zoomControl: false }});
@@ -50,6 +50,22 @@ pub fn Map(
           setLayer(e.matches);
         }});
       }}
+
+      // Also detect theme toggles from the parent document (e.g. Tailwind `dark` class toggles).
+      function updateFromParentPref() {{
+        try {{
+          var parentDark = false;
+          if (window.parent && window.parent.document && window.parent.document.documentElement) {{
+            parentDark = window.parent.document.documentElement.classList.contains('dark');
+          }}
+          if (parentDark !== isDark) {{
+            isDark = parentDark;
+            setLayer(isDark);
+          }}
+        }} catch (e) {{}}
+      }}
+      updateFromParentPref();
+      setInterval(updateFromParentPref, 500);
 
       L.marker([lat, lon]).addTo(map).bindPopup('{esc_title}');
     }})();
