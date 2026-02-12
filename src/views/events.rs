@@ -38,6 +38,8 @@ pub fn Events() -> Element {
     });
 
     // Filtrar eventos según los filtros seleccionados
+    // Ahora preservamos el índice original en la colección para que la navegación
+    // (que espera el índice en el dataset original) apunte al evento correcto.
     let eventos_filtrados = use_memo(move || {
         let data = eventos_data();
         let estado_val = filter_estado();
@@ -45,10 +47,12 @@ pub fn Events() -> Element {
         let orden_val = orden();
         let query = search_query().to_lowercase();
 
-        let mut filtered: Vec<Evento> = data
+        // Colección de pares (índice_original, Evento)
+        let mut filtered: Vec<(usize, Evento)> = data
             .eventos
             .into_iter()
-            .filter(|e| {
+            .enumerate()
+            .filter_map(|(i, e)| {
                 let estado_match = if estado_val == "Todos" {
                     true
                 } else {
@@ -81,21 +85,25 @@ pub fn Events() -> Element {
                         || organizador.contains(&query)
                 };
 
-                estado_match && deporte_match && search_match
+                if estado_match && deporte_match && search_match {
+                    Some((i, e))
+                } else {
+                    None
+                }
             })
             .collect();
 
-        // Ordenar
+        // Ordenar (ahora los elementos son tuplas (idx, evento))
         match orden_val.as_str() {
             "fecha_asc" => {
-                filtered.sort_by(|a, b| a.evento_fecha_inicio.cmp(&b.evento_fecha_inicio))
+                filtered.sort_by(|a, b| a.1.evento_fecha_inicio.cmp(&b.1.evento_fecha_inicio))
             }
             "fecha_desc" => {
-                filtered.sort_by(|a, b| b.evento_fecha_inicio.cmp(&a.evento_fecha_inicio))
+                filtered.sort_by(|a, b| b.1.evento_fecha_inicio.cmp(&a.1.evento_fecha_inicio))
             }
-            "nombre_az" => filtered.sort_by(|a, b| a.evento_nombre.cmp(&b.evento_nombre)),
-            "nombre_za" => filtered.sort_by(|a, b| b.evento_nombre.cmp(&a.evento_nombre)),
-            "deporte" => filtered.sort_by(|a, b| a.get_deporte().cmp(&b.get_deporte())),
+            "nombre_az" => filtered.sort_by(|a, b| a.1.evento_nombre.cmp(&b.1.evento_nombre)),
+            "nombre_za" => filtered.sort_by(|a, b| b.1.evento_nombre.cmp(&a.1.evento_nombre)),
+            "deporte" => filtered.sort_by(|a, b| a.1.get_deporte().cmp(&b.1.get_deporte())),
             _ => {}
         }
 
