@@ -20,6 +20,13 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
       - name: Install Android command-line tools and SDK (platform-tools, build-tools, platforms)
         run: |
           set -e
@@ -34,7 +41,8 @@ jobs:
 
       - name: Install dx (dioxus cli)
         run: |
-          curl -sSL http://dioxus.dev/install.sh | sh
+          curl -sSL http://dioxus.dev/install.sh -o /tmp/dx_install.sh
+          bash /tmp/dx_install.sh
 
       - name: Prepare keystore and properties (from secrets)
         env:
