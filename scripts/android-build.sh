@@ -75,10 +75,75 @@ restore() {
 trap restore EXIT
 
 echo ""
-echo ">>> dx build --platform android --release"
 export PATH="$HOME/.cargo/bin:$PATH"
 cd "$ROOT"
-dx build --platform android --release
+
+# Targets a compilar: triple Rust -> ABI Android
+# aarch64  = dispositivos ARM64 modernos (la gran mayoría)
+# armv7    = dispositivos ARM32 más antiguos
+# x86_64   = emuladores x86_64 (AVD, etc.)
+TARGETS=(
+  "aarch64-linux-android:arm64-v8a"
+  "armv7-linux-androideabi:armeabi-v7a"
+  "x86_64-linux-android:x86_64"
+)
+
+echo ">>> Limpiando PNGs ic_launcher antiguos en target/dx (si existen)"
+find "$ROOT/target/dx" -type f -path '*/release/android/app/app/src/main/res/**/ic_launcher.png' -delete 2>/dev/null || true
+
+# 1. Compilar para cada ABI con dx.
+#    Cada ejecución regenera el proyecto Gradle en target/dx/; la última lo deja listo.
+#    Los .so se acumulan en target/<triple>/ para ser inyectados después.
+for entry in "${TARGETS[@]}"; do
+  triple="${entry%%:*}"
+  abi="${entry##*:}"
+  echo ""
+  echo ">>> dx build --platform android --release --target $triple  ($abi)"
+  dx build --platform android --release --target "$triple"
+done
+
+# 2. Localizar el proyecto Gradle generado por la última compilación
+APP_DIR="$(find "$ROOT/target/dx" -type d -path '*/release/android/app' -print -quit 2>/dev/null || true)"
+if [ -z "$APP_DIR" ]; then
+  echo "ERROR: No se encontró el directorio de la app Gradle generada por dx."
+  exit 1
+fi
+JNILIBS_DIR="$APP_DIR/app/src/main/jniLibs"
+
+# 3. Inyectar los .so de todos los ABIs en el proyecto Gradle
+echo ""
+echo ">>> Inyectando librerías nativas para todos los ABIs en $JNILIBS_DIR"
+for entry in "${TARGETS[@]}"; do
+  triple="${entry%%:*}"
+  abi="${entry##*:}"
+
+  # dx pone el .so final en alguno de estos lugares
+  SO_SRC=""
+  for candidate in \
+    "$ROOT/target/$triple/android-release/libdioxusmain.so" \
+    "$ROOT/target/$triple/release/libdioxusmain.so"; do
+    if [ -f "$candidate" ]; then
+      SO_SRC="$candidate"
+      break
+    fi
+  done
+  # búsqueda de respaldo (excluye deps/ para evitar versiones intermedias)
+  if [ -z "$SO_SRC" ]; then
+    SO_SRC="$(find "$ROOT/target/$triple" -name "libdioxusmain.so" \
+      -not -path '*/deps/*' -print -quit 2>/dev/null || true)"
+  fi
+
+  if [ -n "$SO_SRC" ] && [ -f "$SO_SRC" ]; then
+    echo "  $abi  ←  $SO_SRC"
+    mkdir -p "$JNILIBS_DIR/$abi"
+    cp "$SO_SRC" "$JNILIBS_DIR/$abi/libdioxusmain.so"
+  else
+    echo "  ADVERTENCIA: no se encontró libdioxusmain.so para $triple ($abi) — se omite."
+  fi
+done
+
+# 4. Ejecutar parche post-build reutilizable (ProGuard, minSdk, iconos, firma, zipalign…)
+bash "$SCRIPT_DIR/post-dx-patch.sh"
 
 echo ""
 echo ">>> APK/AAB generados:"

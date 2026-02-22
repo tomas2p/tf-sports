@@ -70,24 +70,54 @@ jobs:
           name: dx-build-log
           path: build-dx-output.log
 
-      - name: Find APK/AAB and verify
+      - name: Find APKs and verify
         run: |
           echo "--- APK/AAB files ---"
-          find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print
-          FOUND=$(find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print -quit)
-          if [ -z "$FOUND" ]; then
-            echo "ERROR: no APK/AAB found"; exit 1
-          fi
-          # Exportar ruta para el paso de release
-          echo "APK_PATH=$FOUND" >> $GITHUB_ENV
+          find . -type f \( -iname "*.apk" -o -iname "*.aab" \) \
+            -not -path "*/intermediates/*" -not -path "*/tmp/*" -print
 
-      - name: Create GitHub Release and upload APK
+          # Preferir APKs firmados; si no, alineados; si no, cualquiera
+          APK_LIST="$(find . -type f -name "*-signed.apk" \
+            -not -path "*/intermediates/*" -not -path "*/tmp/*" -print)"
+          if [ -z "$APK_LIST" ]; then
+            APK_LIST="$(find . -type f -name "*-aligned.apk" \
+              -not -path "*/intermediates/*" -not -path "*/tmp/*" -print)"
+          fi
+          if [ -z "$APK_LIST" ]; then
+            APK_LIST="$(find . -type f -iname "*.apk" \
+              -not -path "*/intermediates/*" -not -path "*/tmp/*" -print)"
+          fi
+
+          if [ -z "$APK_LIST" ]; then
+            echo "ERROR: no APK found"; exit 1
+          fi
+
+          echo "APKs para el release:"
+          echo "$APK_LIST"
+
+          # Guardar lista multilínea como variable de entorno
+          {
+            echo "APK_FILES<<EOF"
+            echo "$APK_LIST"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      - name: Upload APKs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: |
+            **/*-signed.apk
+            **/*-aligned.apk
+          if-no-files-found: warn
+
+      - name: Create GitHub Release and upload APKs
         if: ${{ github.ref_type == 'tag' || github.event.inputs.tag != '' }}
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
           name: Release ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
-          files: ${{ env.APK_PATH }}
+          files: ${{ env.APK_FILES }}
           overwrite_files: true
           fail_on_unmatched_files: false
