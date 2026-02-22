@@ -61,6 +61,15 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
+    // Install panic hooks to get readable stack traces in wasm/android environments
+    #[cfg(all(target_arch = "wasm32", feature = "web"))]
+    console_error_panic_hook::set_once();
+
+    #[cfg(not(target_arch = "wasm32"))]
+    std::panic::set_hook(Box::new(|info| {
+        eprintln!("panic: {:?}", info);
+    }));
+
     // The `launch` function is the main entry point for a dioxus app. It takes a component and renders it with the platform feature
     // you have enabled
     dioxus::launch(App);
@@ -72,13 +81,34 @@ fn main() {
 /// Components should be annotated with `#[component]` to support props, better error messages, and autocomplete
 #[component]
 fn App() -> Element {
-    let theme = use_signal(|| {
+    let mut theme = use_signal(|| {
         let t = theme::Theme::from_storage();
         t.apply();
         t
     });
 
     use_context_provider(|| theme);
+
+    // En Android/desktop el tema no puede leerse síncronamente (web_sys no disponible),
+    // así que lo leemos de forma asíncrona tras el montaje del componente.
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use crate::theme::Theme;
+        use dioxus::prelude::document;
+        use_effect(move || {
+            let mut eval = document::eval("localStorage.getItem('theme') ?? ''");
+            spawn(async move {
+                if let Ok(stored) = eval.recv::<String>().await {
+                    let t = match stored.trim() {
+                        "dark" => Theme::Dark,
+                        _ => Theme::Light,
+                    };
+                    t.apply();
+                    *theme.write() = t;
+                }
+            });
+        });
+    }
 
     // Breadcrumb context: permite a páginas hijas (por ejemplo `Sport`) publicar
     // una ruta parcial que `Event` pueda consumir para renderizar el breadcrumb

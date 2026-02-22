@@ -30,16 +30,16 @@ pub fn Map(
       var lat = {lat};
       var lon = {lon};
       var z = {z};
-      var lightUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{{z}}/{{x}}/{{y}}.png';
-      var darkUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{{z}}/{{x}}/{{y}}.png';
-      var attr = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &amp; <a href="https://openmaptiles.org/">OpenMapTiles</a> &amp; <a href="https://openstreetmap.org">OSM</a>';
+      var lightUrl = 'https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}.png';
+      var darkUrl  = 'https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}.png';
+      var attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
       var map = L.map('map', {{ center: [lat, lon], zoom: z, zoomControl: false }});
 
       function setLayer(isDark) {{
         if (map._tileLayer) map.removeLayer(map._tileLayer);
         var url = isDark ? darkUrl : lightUrl;
-        map._tileLayer = L.tileLayer(url, {{ attribution: attr, maxZoom: 20 }}).addTo(map);
+        map._tileLayer = L.tileLayer(url, {{ attribution: attr, maxZoom: 20, subdomains: 'abcd' }}).addTo(map);
       }}
 
       var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;

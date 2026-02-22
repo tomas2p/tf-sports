@@ -107,7 +107,6 @@ pub fn Events() -> Element {
             _ => {}
         }
 
-        web_sys::console::log_1(&format!("Eventos filtrados: {}", filtered.len()).into());
         filtered
     });
 

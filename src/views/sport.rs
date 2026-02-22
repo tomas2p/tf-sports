@@ -8,7 +8,6 @@ use crate::utils::pagination_filters::{
 };
 use crate::Route;
 use dioxus::prelude::*;
-use js_sys::Date;
 use std::collections::HashMap;
 
 #[component]
@@ -18,22 +17,12 @@ pub fn Sport(category: String) -> Element {
 
     // Indexar eventos por deporte normalizado para iterar solo el subconjunto necesario
     let eventos_por_deporte = use_memo(move || {
-        let start = Date::now();
         let data = eventos_data();
         let mut map: HashMap<String, Vec<usize>> = HashMap::new();
         for (i, e) in data.eventos.iter().enumerate() {
             let deporte = normalize_text(&e.get_deporte());
             map.entry(deporte).or_default().push(i);
         }
-        let elapsed = Date::now() - start;
-        web_sys::console::log_1(
-            &format!(
-                "eventos_por_deporte index: {:.2} ms ({} keys)",
-                elapsed,
-                map.len()
-            )
-            .into(),
-        );
         map
     });
 
@@ -57,7 +46,6 @@ pub fn Sport(category: String) -> Element {
     let normalized_category = use_signal(|| normalize_text(&category));
     // Obtener listas únicas para filtros (solo de eventos de este deporte)
     let organizadores_disponibles = use_memo(move || {
-        let start = Date::now();
         let data = eventos_data();
         let deporte_actual = normalized_category();
 
@@ -71,20 +59,10 @@ pub fn Sport(category: String) -> Element {
         }
         orgs.sort();
         orgs.dedup();
-        let elapsed = Date::now() - start;
-        web_sys::console::log_1(
-            &format!(
-                "organizadores_disponibles: {:.2} ms ({} únicos)",
-                elapsed,
-                orgs.len()
-            )
-            .into(),
-        );
         orgs
     });
 
     let municipios_disponibles = use_memo(move || {
-        let start = Date::now();
         let data = eventos_data();
         let deporte_actual = normalized_category();
 
@@ -100,21 +78,11 @@ pub fn Sport(category: String) -> Element {
         }
         munis.sort();
         munis.dedup();
-        let elapsed = Date::now() - start;
-        web_sys::console::log_1(
-            &format!(
-                "municipios_disponibles: {:.2} ms ({} únicos)",
-                elapsed,
-                munis.len()
-            )
-            .into(),
-        );
         munis
     });
 
     // Filtrar y ordenar eventos
     let eventos_filtrados = use_memo(move || {
-        let start = Date::now();
         let data = eventos_data();
         let deporte_actual = normalized_category();
         let org_val = filter_organizador();
@@ -122,23 +90,17 @@ pub fn Sport(category: String) -> Element {
         let orden_val = orden();
         let query = normalize_text(&search_query());
 
-        web_sys::console::log_1(
-            &format!("Filtrando eventos para deporte: '{}'", deporte_actual).into(),
-        );
-
         // Solo iterar índices del deporte actual usando el índice precomputado
         let mut filtered: Vec<(usize, crate::models::Evento)> = Vec::new();
         if let Some(indices) = eventos_por_deporte().get(&deporte_actual) {
             for i in indices {
                 if let Some(e) = data.eventos.get(*i) {
-                    // Filtro por organizador
                     let org_match = if org_val == "Todos" {
                         true
                     } else {
                         e.evento_organizador == org_val
                     };
 
-                    // Filtro por municipio
                     let muni_match = if muni_val == "Todos" {
                         true
                     } else {
@@ -169,16 +131,6 @@ pub fn Sport(category: String) -> Element {
             }
         }
 
-        let filter_elapsed = Date::now() - start;
-        web_sys::console::log_1(
-            &format!(
-                "eventos_filtrados (filtrado): {:.2} ms ({} eventos)",
-                filter_elapsed,
-                filtered.len()
-            )
-            .into(),
-        );
-
         // Ordenar
         match orden_val.as_str() {
             "fecha_asc" => {
@@ -196,10 +148,6 @@ pub fn Sport(category: String) -> Element {
             _ => {}
         }
 
-        let total_elapsed = Date::now() - start;
-        web_sys::console::log_1(
-            &format!("eventos_filtrados (total): {:.2} ms", total_elapsed).into(),
-        );
         filtered
     });
 
