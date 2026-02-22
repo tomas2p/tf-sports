@@ -23,13 +23,6 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      # - name: Install Rust (rustup)
-      #   run: |
-      #     set -e
-      #     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup.sh
-      #     sh /tmp/rustup.sh -y --no-modify-path
-      #     echo "export PATH=$HOME/.cargo/bin:$PATH" >> $GITHUB_ENV
-
       - name: Install Android command-line tools and SDK (platform-tools, build-tools, platforms)
         run: |
           set -e
@@ -46,6 +39,10 @@ jobs:
         run: |
           curl -sSL http://dioxus.dev/install.sh -o /tmp/dx_install.sh
           bash /tmp/dx_install.sh
+
+      - name: Add Android Rust targets
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
 
       - name: Prepare keystore and properties (from secrets)
         env:
@@ -67,8 +64,8 @@ jobs:
           set -e
           # Ensure dx installed is on PATH (install script puts it in ~/.cargo/bin)
           export PATH="$HOME/.cargo/bin:$PATH"
-          # Capture output to a log for debugging and upload
-          dx build --release 2>&1 | tee build-dx-output.log
+          # Build para Android (APK)
+          dx build --platform android --release 2>&1 | tee build-dx-output.log
 
       - name: List produced APK/AAB files (debug)
         run: |
@@ -82,7 +79,9 @@ jobs:
       - name: Verify artifacts exist
         run: |
           set -e
-          FOUND=$(find android/app/build/outputs app/build/outputs . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print -quit || true)
+          echo "--- All APK/AAB files found ---"
+          find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -not -path '*/target/dx/*' -print || true
+          FOUND=$(find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print -quit || true)
           if [ -z "$FOUND" ]; then
             echo "ERROR: No APK/AAB artifacts found. Check dx build logs above."
             exit 1
@@ -111,7 +110,7 @@ jobs:
           path: build-dx-output.log
 
       - name: Create GitHub Release and upload assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
