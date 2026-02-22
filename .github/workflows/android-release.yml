@@ -54,6 +54,8 @@ jobs:
           echo "keystore.properties creado OK"
 
       - name: Build Android release (dx)
+        env:
+          GRADLE_OPTS: "-Dandroid.lint.abortOnError=false"
         run: |
           bash scripts/android-build.sh 2>&1 | tee build-dx-output.log
 

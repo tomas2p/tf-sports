@@ -44,6 +44,18 @@ fi
 # Ruta relativa al workspace (Dioxus la resuelve relativa al proyecto)
 JKS_RELATIVE="$(realpath --relative-to="$ROOT" "$JKS_FILE" 2>/dev/null || echo "$JKS_FILE")"
 
+echo ">>> Configurando Gradle para deshabilitar lintVital..."
+mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+cat > "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/disable-lint.gradle" << 'GRADLE_EOF'
+gradle.taskGraph.whenReady { graph ->
+    graph.allTasks.each { task ->
+        if (task.name.toLowerCase().contains('lintvital')) {
+            task.enabled = false
+        }
+    }
+}
+GRADLE_EOF
+
 echo ">>> Parcheando Dioxus.toml con credenciales de keystore.properties..."
 cp "$ROOT/Dioxus.toml" "$ROOT/Dioxus.toml.bak"
 

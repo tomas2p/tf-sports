@@ -7,6 +7,7 @@
 **/*.rs.bk
 
 *.jks
+*.base64
 keystore.properties
 Dioxus.toml.bak
 android/keystore-info.txt
