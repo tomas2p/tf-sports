@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   build-release:
     runs-on: ubuntu-latest
@@ -64,7 +67,9 @@ jobs:
           set -e
           # Ensure dx installed is on PATH (install script puts it in ~/.cargo/bin)
           export PATH="$HOME/.cargo/bin:$PATH"
-          dx build --release
+          # Capture output to a log for debugging and upload
+          dx build --release 2>&1 | tee build-dx-output.log
+          echo "build-dx-output.log" >> $GITHUB_ENV
 
       - name: List produced APK/AAB files (debug)
         run: |
@@ -74,6 +79,16 @@ jobs:
           ls -la android || true
           ls -la android/app/build/outputs || true
           ls -la app/build/outputs || true
+
+      - name: Verify artifacts exist
+        run: |
+          set -e
+          FOUND=$(find android/app/build/outputs app/build/outputs . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print -quit || true)
+          if [ -z "$FOUND" ]; then
+            echo "ERROR: No APK/AAB artifacts found. Check dx build logs above."
+            exit 1
+          fi
+          echo "Artifact found: $FOUND"
 
       - name: Upload APK/AAB artifacts
         uses: actions/upload-artifact@v4
@@ -88,6 +103,13 @@ jobs:
             **/build/outputs/**/*.aab
             **/*.apk
             **/*.aab
+
+      - name: Upload dx build log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dx-build-log
+          path: build-dx-output.log
 
       - name: Create GitHub Release
         id: create_release
