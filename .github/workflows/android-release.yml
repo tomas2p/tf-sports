@@ -4,7 +4,11 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name to use for the release (only needed for manual dispatch)"
+        required: false
 
 permissions:
   contents: write
@@ -78,10 +82,13 @@ jobs:
           echo "APK_PATH=$FOUND" >> $GITHUB_ENV
 
       - name: Create GitHub Release and upload APK
+        if: ${{ github.ref_type == 'tag' || github.event.inputs.tag != '' }}
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
+          release_name: Release ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
           files: |
             **/build/outputs/**/*.apk
             **/build/outputs/**/*.aab
