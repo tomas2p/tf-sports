@@ -47,17 +47,23 @@ jobs:
       - name: Prepare keystore and properties (from secrets)
         env:
           KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -e
-          # Write keystore file
-          base64 -d <<< "$KEY_BASE64" > "$GITHUB_WORKSPACE/keystore.jks"
-          chmod 600 "$GITHUB_WORKSPACE/keystore.jks"
-          # Create keystore.properties for Gradle to consume
-          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > "$GITHUB_WORKSPACE/keystore.properties"
-          echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_WORKSPACE/keystore.properties"
-          echo "storePassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_WORKSPACE/keystore.properties"
-          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_WORKSPACE/keystore.properties"
-          echo "storeFile=$GITHUB_WORKSPACE/keystore.jks" >> "$GITHUB_WORKSPACE/keystore.properties"
+          JKS_PATH="$GITHUB_WORKSPACE/keystore.jks"
+          # Write keystore file from base64 secret
+          base64 -d <<< "$KEY_BASE64" > "$JKS_PATH"
+          chmod 600 "$JKS_PATH"
+          # Patch Dioxus.toml with real keystore path and credentials
+          # Dioxus reads signing config from Dioxus.toml, not keystore.properties
+          sed -i "s|jks_file = \".*\"|jks_file = \"$JKS_PATH\"|" Dioxus.toml
+          sed -i "s|jks_alias = \".*\"|jks_alias = \"$KEY_ALIAS\"|" Dioxus.toml
+          sed -i "s|jks_password = \".*\"|jks_password = \"$KEY_PASSWORD\"|" Dioxus.toml
+          sed -i "s|key_alias = \".*\"|key_alias = \"$KEY_ALIAS\"|" Dioxus.toml
+          sed -i "s|key_password = \".*\"|key_password = \"$KEY_PASSWORD\"|" Dioxus.toml
+          echo "Dioxus.toml patched:"
+          grep -A8 '\[bundle.android\]' Dioxus.toml | sed 's/password = .*/password = ***/'
 
       - name: Build release (dx)
         run: |

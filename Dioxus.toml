@@ -26,7 +26,7 @@ identifier = "com.tfsports.app"
 # Editor / publisher
 publisher = "Tomás Pino Pérez"
 # Iconos a incluir en el bundle (rutas relativas al proyecto)
-icon = ["/assets/icon.png"]
+icon = ["/assets/android-chrome-512x512.png"]
 # Recursos extra que deben empaquetarse
 resources = ["/assets/robots.txt", "/assets/tailwind.css"]
 # Breves descripciones para stores
@@ -41,7 +41,7 @@ copyright = "Tomás Pino Pérez"
 [bundle.android]
 # Nombre del paquete Android (puede usarse si el empaquetador soporta override)
 package = "com.tfsports.app"
-icons = ["/assets/android-chrome-192x192.png"]
+icons = ["/assets/android-chrome-512x512.png"]
 # Ruta al archivo JKS para firmar el APK. Si no se dispone aún, dejar vacío.
 jks_file = ""
 jks_alias = "tomas2p"
