@@ -81,7 +81,15 @@ fn main() {
 /// Components should be annotated with `#[component]` to support props, better error messages, and autocomplete
 #[component]
 fn App() -> Element {
+    #[cfg(not(target_arch = "wasm32"))]
     let mut theme = use_signal(|| {
+        let t = theme::Theme::from_storage();
+        t.apply();
+        t
+    });
+
+    #[cfg(target_arch = "wasm32")]
+    let theme = use_signal(|| {
         let t = theme::Theme::from_storage();
         t.apply();
         t
@@ -104,7 +112,7 @@ fn App() -> Element {
                         _ => Theme::Light,
                     };
                     t.apply();
-                    *theme.write() = t;
+                    theme.with_mut(|s| *s = t);
                 }
             });
         });
