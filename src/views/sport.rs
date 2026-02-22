@@ -1,5 +1,7 @@
-use crate::components::{breadcrumb_items, Breadcrumb, FilterSpec, PaginatedListing, SearchBar, EventCard};
 use crate::components::event_card::LayoutVariant;
+use crate::components::{
+    breadcrumb_items, Breadcrumb, EventCard, FilterSpec, PaginatedListing, SearchBar,
+};
 use crate::data::get_eventos;
 use crate::filters;
 use crate::models::{normalize_text, strip_html};
