@@ -8,3 +8,4 @@
 
 *.jks
 keystore.properties
+android/keystore-info.txt
