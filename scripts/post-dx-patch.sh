@@ -263,13 +263,87 @@ ICEOF
         echo "  firmado → $SIGNED"
       fi
     done
+    # Renombrar/copiar los APK firmados/alineados con nombres legibles por ABI
+    RELEASE_ASSETS_FILE="$APK_OUTPUT_DIR/release-assets.txt"
+    : > "$RELEASE_ASSETS_FILE"
+    # Determinar nombre y versión de la app (desde Cargo.toml)
+    APP_NAME_RAW="$(sed -n 's/^name\s*=\s*"\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -n1 || true)"
+    # Preferir versión desde etiqueta Git (env GIT_TAG o GITHUB_REF_NAME si están presentes)
+    if [ -n "${GIT_TAG:-}" ]; then
+      APP_VERSION_RAW="$GIT_TAG"
+    elif [ -n "${GITHUB_REF_NAME:-}" ]; then
+      APP_VERSION_RAW="$GITHUB_REF_NAME"
+    else
+      APP_VERSION_RAW="$(git -C "$ROOT" describe --tags --exact-match 2>/dev/null || true)"
+      if [ -z "$APP_VERSION_RAW" ]; then
+        APP_VERSION_RAW="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+      fi
+    fi
+    # Si no se encontraba tag/git, fallback a Cargo.toml
+    if [ -z "$APP_VERSION_RAW" ]; then
+      APP_VERSION_RAW="$(sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -n1 || true)"
+    fi
+    # Normalizar: quitar prefijo 'v' si existe
+    APP_VERSION="$(echo "$APP_VERSION_RAW" | sed 's/^v//i')"
+    if [ -z "$APP_NAME_RAW" ]; then
+      APP_NAME_RAW="app"
+    fi
+    if [ -z "$APP_VERSION" ]; then
+      APP_VERSION="0.0.0"
+    fi
+    # slug: kebab-case, ascii lowercase, replace non-alnum with '-'
+    APP_NAME="$(echo "$APP_NAME_RAW" | iconv -f utf8 -t ascii//TRANSLIT 2>/dev/null | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]+/-/g' | sed 's/^-\|-$//g')"
 
-    # Copiar universal alineado/firmado a la raíz del app dir (compatibilidad con pasos anteriores)
-    UNIV_BASENAME="$(basename "$UNIVERSAL_APK" .apk)"
-    UNIV_ALIGNED="${APK_OUTPUT_DIR}/${UNIV_BASENAME}-aligned.apk"
-    UNIV_SIGNED="${APK_OUTPUT_DIR}/${UNIV_BASENAME}-signed.apk"
-    [ -f "$UNIV_SIGNED"  ] && cp "$UNIV_SIGNED"  "app-release-signed.apk"  || true
-    [ -f "$UNIV_ALIGNED" ] && cp "$UNIV_ALIGNED" "app-release-aligned.apk" || true
+    for APK_IN in "${ALL_APKS[@]}"; do
+      BASENAME="$(basename "$APK_IN" .apk)"
+      SIGNED="${APK_OUTPUT_DIR}/${BASENAME}-signed.apk"
+      ALIGNED="${APK_OUTPUT_DIR}/${BASENAME}-aligned.apk"
+
+      # Determinar ABI a partir del nombre del archivo
+      ABI_LABEL="unknown"
+      lname="${BASENAME,,}"
+      if echo "$lname" | grep -q "universal"; then
+        ABI_LABEL="universal"
+      elif echo "$lname" | grep -q "arm64" || echo "$lname" | grep -q "aarch64"; then
+        ABI_LABEL="arm64-v8a"
+      elif echo "$lname" | grep -q "arm" || echo "$lname" | grep -q "armeabi" || echo "$lname" | grep -q "armv7"; then
+        ABI_LABEL="armeabi-v7a"
+      elif echo "$lname" | grep -q "x86_64" || echo "$lname" | grep -q "x86-64"; then
+        ABI_LABEL="x86_64"
+      elif echo "$lname" | grep -q "x86" || echo "$lname" | grep -q "i686"; then
+        ABI_LABEL="x86"
+      fi
+
+      # Nombre bonito: <arch>-<app>-v<version>.apk (prefiere signed, luego aligned, luego original)
+      OUT_NAME="${APK_OUTPUT_DIR}/${ABI_LABEL}-${APP_NAME}-v${APP_VERSION}.apk"
+      if [ -f "$SIGNED" ]; then
+        cp "$SIGNED" "$OUT_NAME" || true
+        echo "Copied signed $SIGNED -> $OUT_NAME"
+        echo "$OUT_NAME" >> "$RELEASE_ASSETS_FILE"
+      elif [ -f "$ALIGNED" ]; then
+        cp "$ALIGNED" "$OUT_NAME" || true
+        echo "Copied aligned $ALIGNED -> $OUT_NAME"
+        echo "$OUT_NAME" >> "$RELEASE_ASSETS_FILE"
+      elif [ -f "$APK_IN" ]; then
+        cp "$APK_IN" "$OUT_NAME" || true
+        echo "Copied raw $APK_IN -> $OUT_NAME"
+        echo "$OUT_NAME" >> "$RELEASE_ASSETS_FILE"
+      else
+        echo "Warning: no artifact found for $APK_IN"
+      fi
+    done
+
+    # También exponer el APK universal con nombre estandar en la raíz para compatibilidad
+    if [ -f "$APK_OUTPUT_DIR/app-universal-release-signed.apk" ]; then
+      cp "$APK_OUTPUT_DIR/app-universal-release-signed.apk" "app-release-signed.apk" || true
+    else
+      # intentar copiar el que detectamos antes
+      UNIV_BASENAME="$(basename "$UNIVERSAL_APK" .apk)"
+      UNIV_SIGNED="${APK_OUTPUT_DIR}/${UNIV_BASENAME}-signed.apk"
+      UNIV_ALIGNED="${APK_OUTPUT_DIR}/${UNIV_BASENAME}-aligned.apk"
+      [ -f "$UNIV_SIGNED"  ] && cp "$UNIV_SIGNED"  "app-release-signed.apk"  || true
+      [ -f "$UNIV_ALIGNED" ] && cp "$UNIV_ALIGNED" "app-release-aligned.apk" || true
+    fi
 
     if [ "$INSTALL" = "true" ]; then
       INSTALL_APK=""
