@@ -2,7 +2,7 @@ name: Android Release (Dioxus)
 
 on:
   push:
-    tags: # trigger on tags (create a release tag)
+    tags:
       - "v*"
   workflow_dispatch: {}
 
@@ -12,119 +12,78 @@ permissions:
 jobs:
   build-release:
     runs-on: ubuntu-latest
+    # Java 17, Android SDK y Rust ya vienen preinstalados en ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "17"
+      - name: Add Android Rust targets
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
 
-      - name: Install Android command-line tools and SDK (platform-tools, build-tools, platforms)
-        run: |
-          set -e
-          SDK_ROOT="$RUNNER_TEMP/android-sdk"
-          mkdir -p "$SDK_ROOT/cmdline-tools"
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O /tmp/cmdline.zip
-          unzip -q /tmp/cmdline.zip -d "$SDK_ROOT/cmdline-tools"
-          mv "$SDK_ROOT/cmdline-tools/cmdline-tools" "$SDK_ROOT/cmdline-tools/latest" || true
-          export PATH="$SDK_ROOT/cmdline-tools/latest/bin:$SDK_ROOT/platform-tools:$PATH"
-          yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" --licenses
-          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+      - name: Cache Cargo registry + build
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Clave extra para Android (targets distintos al host)
+          key: android-release
 
       - name: Install dx (dioxus cli)
         run: |
-          curl -sSL http://dioxus.dev/install.sh -o /tmp/dx_install.sh
-          bash /tmp/dx_install.sh
+          # Intentar restaurar caché de dx para evitar reinstalarlo en cada run
+          if ! command -v dx &>/dev/null; then
+            curl -sSL http://dioxus.dev/install.sh -o /tmp/dx_install.sh
+            bash /tmp/dx_install.sh
+          fi
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Add Android Rust targets
-        run: |
-          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
-
-      - name: Prepare keystore and properties (from secrets)
+      - name: Prepare keystore and patch Dioxus.toml (from secrets)
         env:
           KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -e
-          JKS_PATH="$GITHUB_WORKSPACE/keystore.jks"
-          # Write keystore file from base64 secret
+          JKS_PATH="$RUNNER_TEMP/keystore.jks"
           base64 -d <<< "$KEY_BASE64" > "$JKS_PATH"
           chmod 600 "$JKS_PATH"
-          # Patch Dioxus.toml with real keystore path and credentials
-          # Dioxus reads signing config from Dioxus.toml, not keystore.properties
-          sed -i "s|jks_file = \".*\"|jks_file = \"$JKS_PATH\"|" Dioxus.toml
-          sed -i "s|jks_alias = \".*\"|jks_alias = \"$KEY_ALIAS\"|" Dioxus.toml
+          sed -i "s|jks_file = \".*\"|jks_file = \"$JKS_PATH\"|"       Dioxus.toml
+          sed -i "s|jks_alias = \".*\"|jks_alias = \"$KEY_ALIAS\"|"     Dioxus.toml
           sed -i "s|jks_password = \".*\"|jks_password = \"$KEY_PASSWORD\"|" Dioxus.toml
-          sed -i "s|key_alias = \".*\"|key_alias = \"$KEY_ALIAS\"|" Dioxus.toml
+          sed -i "s|key_alias = \".*\"|key_alias = \"$KEY_ALIAS\"|"     Dioxus.toml
           sed -i "s|key_password = \".*\"|key_password = \"$KEY_PASSWORD\"|" Dioxus.toml
-          echo "Dioxus.toml patched:"
+          echo "Dioxus.toml patched (passwords hidden):"
           grep -A8 '\[bundle.android\]' Dioxus.toml | sed 's/password = .*/password = ***/'
 
-      - name: Build release (dx)
+      - name: Build Android release (dx)
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || '/usr/local/lib/android/sdk' }}
         run: |
-          set -e
-          # Ensure dx installed is on PATH (install script puts it in ~/.cargo/bin)
-          export PATH="$HOME/.cargo/bin:$PATH"
-          # Build para Android (APK)
           dx build --platform android --release 2>&1 | tee build-dx-output.log
 
-      - name: List produced APK/AAB files (debug)
-        run: |
-          echo "Looking for APK/AAB files..."
-          find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print || true
-          echo "Show build outputs for Android Gradle standard locations:"
-          ls -la android || true
-          ls -la android/app/build/outputs || true
-          ls -la app/build/outputs || true
-
-      - name: Verify artifacts exist
-        run: |
-          set -e
-          echo "--- All APK/AAB files found ---"
-          find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -not -path '*/target/dx/*' -print || true
-          FOUND=$(find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print -quit || true)
-          if [ -z "$FOUND" ]; then
-            echo "ERROR: No APK/AAB artifacts found. Check dx build logs above."
-            exit 1
-          fi
-          echo "Artifact found: $FOUND"
-
-      - name: Upload APK/AAB artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-build-artifacts
-          path: |
-            android/app/build/outputs/**/*.apk
-            android/app/build/outputs/**/*.aab
-            app/build/outputs/**/*.apk
-            app/build/outputs/**/*.aab
-            **/build/outputs/**/*.apk
-            **/build/outputs/**/*.aab
-            **/*.apk
-            **/*.aab
-
       - name: Upload dx build log
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dx-build-log
           path: build-dx-output.log
 
-      - name: Create GitHub Release and upload assets
+      - name: Find APK/AAB and verify
+        run: |
+          echo "--- APK/AAB files ---"
+          find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print
+          FOUND=$(find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print -quit)
+          if [ -z "$FOUND" ]; then
+            echo "ERROR: no APK/AAB found"; exit 1
+          fi
+          # Exportar ruta para el paso de release
+          echo "APK_PATH=$FOUND" >> $GITHUB_ENV
+
+      - name: Create GitHub Release and upload APK
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
-            android/app/build/outputs/**/*.apk
-            android/app/build/outputs/**/*.aab
-            app/build/outputs/**/*.apk
-            app/build/outputs/**/*.aab
             **/build/outputs/**/*.apk
             **/build/outputs/**/*.aab
             **/*.apk
