@@ -9,7 +9,7 @@ title = "TF Sports"
 [web.resource]
 
 # Additional CSS style files
-style = []
+style = ["/assets/tailwind.css"]
 
 # Additional JavaScript files
 script = []
@@ -19,3 +19,37 @@ script = []
 # Javascript code file
 # serve: [dev-server] only
 script = []
+
+[bundle]
+# Identificador del paquete (ej: com.tfsports.app)
+identifier = "com.tfsports.app"
+# Editor / publisher
+publisher = "Tomás Pino Pérez"
+# Iconos a incluir en el bundle (rutas relativas al proyecto)
+icon = ["/assets/icon.png"]
+# Recursos extra que deben empaquetarse
+resources = ["/assets/robots.txt", "/assets/tailwind.css"]
+# Breves descripciones para stores
+short_description = "Agenda deportiva y directorio de instalaciones en Tenerife"
+long_description = "TF Sports — busca eventos deportivos, instalaciones y actividades en Tenerife. Mapas, calendarios y filtros para encontrar lo que busques."
+# Categoría orientativa
+category = "Sports"
+# Copyright / publisher notice
+copyright = "Tomás Pino Pérez"
+
+# Configuración mínima relevante para móviles
+[bundle.android]
+# Nombre del paquete Android (puede usarse si el empaquetador soporta override)
+package = "com.tfsports.app"
+icons = ["/assets/android-chrome-192x192.png"]
+# Ruta al archivo JKS para firmar el APK. Si no se dispone aún, dejar vacío.
+jks_file = ""
+jks_alias = "tomas2p"
+jks_password = ""
+key_alias = "tomas2p"
+key_password = ""
+
+[bundle.ios]
+# Identificador iOS (reverse-domain)
+bundle_identifier = "com.tfsports.app"
+icons = ["/assets/apple-touch-icon.png"]

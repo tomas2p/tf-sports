@@ -535,12 +535,18 @@
     }
   }
 
+  .w-1\/2 {
+    width: 50%;
+  }
+
+  .w-1\/3,
   .md\:w-1\/3 {
     @media (min-width: 768px) {
       width: 33.333333%;
     }
   }
 
+  .w-2\/3,
   .md\:w-2\/3 {
     @media (min-width: 768px) {
       width: 66.666667%;
@@ -617,6 +623,10 @@
     justify-content: center;
   }
 
+  .justify-around {
+    justify-content: space-around;
+  }
+
   .place-items-baseline {
     place-items: baseline;
   }
@@ -643,6 +653,10 @@
 
   .gap-8 {
     gap: calc(var(--spacing) * 8);
+  }
+
+  .gap-x-6 {
+    column-gap: calc(var(--spacing) * 6);
   }
 
   .gap-x-8 {

@@ -13,9 +13,6 @@ pub fn Navbar() -> Element {
     let mut theme = use_context::<Signal<Theme>>();
 
     // ── Layout Android / iOS ──────────────────────────────────────────────
-    // Flex-column que ocupa exactamente la pantalla. El `main` tiene
-    // `overflow-auto flex-1` y es el ÚNICO elemento que hace scroll.
-    // La bottom nav es un hijo normal al final del flex → siempre visible.
     #[cfg(any(target_os = "android", target_os = "ios"))]
     return rsx! {
         div {
@@ -94,16 +91,18 @@ pub fn Navbar() -> Element {
                         dark:supports-[backdrop-filter]:bg-zinc-950/60",
                 div { class: "container mx-auto px-4 md:px-6 lg:px-8",
                     div { class: "flex h-14 items-center justify-between",
-                        Link {
-                            to: Route::Home {},
-                            class: "text-base font-bold text-zinc-950 dark:text-zinc-50 \
-                                    hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors",
-                            "TF Sports"
-                        }
-                        div { class: "flex items-center gap-6",
-                            NavLink { to: Route::Events {}, label: "Eventos" }
-                            NavLink { to: Route::Sports {}, label: "Deportes" }
-                            NavLink { to: Route::Places {}, label: "Instalaciones" }
+                        div { class: "flex flex-col md:flex-row justify-between gap-x-6",
+                            Link {
+                                to: Route::Home {},
+                                class: "text-base font-bold text-zinc-950 dark:text-zinc-50 \
+                                        hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors",
+                                "TF Sports"
+                            }
+                            div { class: "flex items-center gap-6",
+                                NavLink { to: Route::Events {}, label: "Eventos" }
+                                NavLink { to: Route::Sports {}, label: "Deportes" }
+                                NavLink { to: Route::Places {}, label: "Instalaciones" }
+                            }
                         }
                         Button {
                             variant: ButtonVariant::Outline,
