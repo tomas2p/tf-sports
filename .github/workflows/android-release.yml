@@ -84,13 +84,10 @@ jobs:
       - name: Create GitHub Release and upload APK
         if: ${{ github.ref_type == 'tag' || github.event.inputs.tag != '' }}
         uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
-          release_name: Release ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
-          files: |
-            **/build/outputs/**/*.apk
-            **/build/outputs/**/*.aab
-            **/*.apk
-            **/*.aab
+          name: Release ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
+          files: ${{ env.APK_PATH }}
+          overwrite_files: true
+          fail_on_unmatched_files: false
