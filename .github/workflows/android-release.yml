@@ -9,8 +9,7 @@ on:
 jobs:
   build-release:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,7 +23,7 @@ jobs:
       - name: Install Android command-line tools and SDK (platform-tools, build-tools, platforms)
         run: |
           set -e
-          SDK_ROOT="$ANDROID_SDK_ROOT"
+          SDK_ROOT="$RUNNER_TEMP/android-sdk"
           mkdir -p "$SDK_ROOT/cmdline-tools"
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O /tmp/cmdline.zip
           unzip -q /tmp/cmdline.zip -d "$SDK_ROOT/cmdline-tools"
