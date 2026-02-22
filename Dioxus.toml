@@ -28,7 +28,7 @@ publisher = "Tomás Pino Pérez"
 # Iconos a incluir en el bundle (rutas relativas al proyecto)
 icon = ["/assets/android-chrome-512x512.png"]
 # Recursos extra que deben empaquetarse
-resources = ["/assets/robots.txt", "/assets/tailwind.css"]
+resources = ["/assets/robots.txt"]
 # Breves descripciones para stores
 short_description = "Agenda deportiva y directorio de instalaciones en Tenerife"
 long_description = "TF Sports — busca eventos deportivos, instalaciones y actividades en Tenerife. Mapas, calendarios y filtros para encontrar lo que busques."

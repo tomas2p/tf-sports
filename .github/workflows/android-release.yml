@@ -36,29 +36,26 @@ jobs:
           fi
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Prepare keystore and patch Dioxus.toml (from secrets)
+      - name: Prepare keystore.properties (from secrets)
         env:
           KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -e
-          JKS_PATH="$RUNNER_TEMP/keystore.jks"
+          # El JKS va dentro del workspace para que la ruta relativa funcione con Dioxus
+          JKS_PATH="$GITHUB_WORKSPACE/keystore.jks"
           base64 -d <<< "$KEY_BASE64" > "$JKS_PATH"
           chmod 600 "$JKS_PATH"
-          sed -i "s|jks_file = \".*\"|jks_file = \"$JKS_PATH\"|"       Dioxus.toml
-          sed -i "s|jks_alias = \".*\"|jks_alias = \"$KEY_ALIAS\"|"     Dioxus.toml
-          sed -i "s|jks_password = \".*\"|jks_password = \"$KEY_PASSWORD\"|" Dioxus.toml
-          sed -i "s|key_alias = \".*\"|key_alias = \"$KEY_ALIAS\"|"     Dioxus.toml
-          sed -i "s|key_password = \".*\"|key_password = \"$KEY_PASSWORD\"|" Dioxus.toml
-          echo "Dioxus.toml patched (passwords hidden):"
-          grep -A8 '\[bundle.android\]' Dioxus.toml | sed 's/password = .*/password = ***/'
+          # Crear keystore.properties igual que en la guía oficial
+          echo "password=$KEY_PASSWORD"  >  keystore.properties
+          echo "keyAlias=$KEY_ALIAS"     >> keystore.properties
+          echo "storeFile=$JKS_PATH"     >> keystore.properties
+          echo "keystore.properties creado OK"
 
       - name: Build Android release (dx)
-        env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT || '/usr/local/lib/android/sdk' }}
         run: |
-          dx build --platform android --release 2>&1 | tee build-dx-output.log
+          bash scripts/android-build.sh 2>&1 | tee build-dx-output.log
 
       - name: Upload dx build log
         if: always()
