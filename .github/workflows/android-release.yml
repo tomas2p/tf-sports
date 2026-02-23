@@ -106,16 +106,40 @@ jobs:
 
       - name: Find final APKs and prepare release metadata
         run: |
-          APK_DIR="app/build/outputs/apk/release"
-          ASSETS_FILE="$APK_DIR/release-assets.txt"
+          set -e
+          echo "Searching for APKs in common output locations..."
+          # prefer explicit manifest if produced by post-dx-patch
+          APK_LIST=""
+          ASSETS_FILE="app/build/outputs/apk/release/release-assets.txt"
           if [ -f "$ASSETS_FILE" ]; then
-            echo "Using $ASSETS_FILE"
-            APK_LIST=$(sed -n 's/^\s*\(.*\.apk\)\s*$/\1/p' "$ASSETS_FILE" )
-          else
-            APK_LIST=$(find "$APK_DIR" -type f -name "*.apk" -print || true)
+            echo "Using asset manifest: $ASSETS_FILE"
+            APK_LIST=$(sed -n 's/^\s*\(.*\.apk\)\s*$/\1/p' "$ASSETS_FILE" | tr '\n' ' ')
+          fi
+
+          # fallback: search common paths and inside target/dx generated projects
+          if [ -z "$APK_LIST" ]; then
+            echo "No manifest — scanning filesystem for *.apk under target/dx and app/..."
+            APK_LIST=$(find target/dx -type f -iname "*.apk" -print 2>/dev/null || true)
+          fi
+          if [ -z "$APK_LIST" ]; then
+            APK_LIST=$(find app/build -type f -iname "*.apk" -print 2>/dev/null || true)
+          fi
+          if [ -z "$APK_LIST" ]; then
+            APK_LIST=$(find . -type f -iname "*.apk" -not -path "*/intermediates/*" -not -path "*/tmp/*" -print 2>/dev/null || true)
           fi
 
           if [ -z "$APK_LIST" ]; then
+            echo "--- Diagnostics: directory listing ---"
+            echo "Workspace root listing:"
+            ls -la || true
+            echo "target/ listing:"
+            ls -la target || true
+            echo "artifacts/ listing:"
+            ls -la artifacts || true
+            echo "app/build listing:"
+            ls -la app/build || true
+            echo "assemble-release.log (if present):"
+            [ -f assemble-release.log ] && sed -n '1,200p' assemble-release.log || true
             echo "ERROR: no APKs found"; exit 1
           fi
 

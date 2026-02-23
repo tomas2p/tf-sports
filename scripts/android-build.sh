@@ -82,11 +82,32 @@ cd "$ROOT"
 # aarch64  = dispositivos ARM64 modernos (la gran mayoría)
 # armv7    = dispositivos ARM32 más antiguos
 # x86_64   = emuladores x86_64 (AVD, etc.)
-TARGETS=(
-  "aarch64-linux-android:arm64-v8a"
-  "armv7-linux-androideabi:armeabi-v7a"
-  "x86_64-linux-android:x86_64"
-)
+#
+# Para pruebas locales puedes exportar `ANDROID_TARGET` con un único
+# entry en formato "<triple>:<abi>" (por ejemplo
+# "aarch64-linux-android:arm64-v8a") o `ANDROID_TARGETS` como lista
+# separada por comas. Si no se especifica, se usa por defecto
+# "aarch64-linux-android:arm64-v8a".
+if [ -n "${ANDROID_TARGET:-}" ]; then
+  TARGETS=("$ANDROID_TARGET")
+elif [ -n "${ANDROID_TARGETS:-}" ]; then
+  IFS=',' read -r -a TARGETS <<< "$ANDROID_TARGETS"
+else
+  TARGETS=(
+    # Para pruebas rápidas deja solo una entrada; para release añade todas las que necesites:
+    "aarch64-linux-android:arm64-v8a"
+    # "armv7-linux-androideabi:armeabi-v7a"
+    # "x86_64-linux-android:x86_64"
+  )
+fi
+
+# Exportar SINGLE_ARCH si solo hay una arquitectura objetivo para evitar splits innecesarios
+if [ "${#TARGETS[@]}" -eq 1 ]; then
+  export SINGLE_ARCH=true
+  echo ">>> Una sola arquitectura (${TARGETS[0]}) — SINGLE_ARCH=true (sin APK splits)"
+else
+  export SINGLE_ARCH=false
+fi
 
 echo ">>> Limpiando PNGs ic_launcher antiguos en target/dx (si existen)"
 find "$ROOT/target/dx" -type f -path '*/release/android/app/app/src/main/res/**/ic_launcher.png' -delete 2>/dev/null || true
@@ -147,4 +168,8 @@ bash "$SCRIPT_DIR/post-dx-patch.sh"
 
 echo ""
 echo ">>> APK/AAB generados:"
-find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print
+if [ -n "${APP_DIR:-}" ]; then
+  find "$APP_DIR" -type f \( -iname "*.apk" -o -iname "*.aab" \) -print
+else
+  find . -type f \( -iname "*.apk" -o -iname "*.aab" \) -print
+fi

@@ -4,11 +4,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-MIN_SDK="${MIN_SDK:-21}"
 ICONS_DIR="${ICONS_DIR:-}"
 JKS_FILE="${JKS_FILE:-}"
 KEY_PASSWORD="${KEY_PASSWORD:-}"
 INSTALL="${INSTALL:-false}"
+SINGLE_ARCH="${SINGLE_ARCH:-false}"
 
 DX_APP_DIR="$(find "$ROOT/target/dx" -type d -path '*/release/android/app' -print -quit 2>/dev/null || true)"
 if [ -n "$DX_APP_DIR" ]; then
@@ -41,10 +41,11 @@ if [ -n "$DX_APP_DIR" ]; then
     fi
   fi
 
-  # --- Ensure AndroidManifest does not set extractNativeLibs (manifest merger warnings)
+  # --- Remove deprecated extractNativeLibs from AndroidManifest (AGP 8+ warns about it).
+  # Native lib extraction is handled via useLegacyPackaging=true in build.gradle.kts instead.
   if [ -f "app/src/main/AndroidManifest.xml" ]; then
-    echo ">>> Eliminando android:extractNativeLibs de manifests si existe"
-    sed -i -E "s/\s*android:extractNativeLibs\s*=\s*\"(true|false)\"//g" app/src/main/AndroidManifest.xml || true
+    echo ">>> Eliminando android:extractNativeLibs del AndroidManifest (deprecado en AGP 8+)"
+    sed -i -E 's/\s*android:extractNativeLibs\s*=\s*"(true|false)"//g' app/src/main/AndroidManifest.xml || true
   fi
 
   # --- Deploy ProGuard/R8 rules: prefer repo file if present
@@ -68,32 +69,242 @@ if [ -n "$DX_APP_DIR" ]; then
 RPROB
   fi
 
-  echo ">>> Parcheando minSdk a $MIN_SDK en archivos Gradle generados (si existen)"
-  GRADLE_FILES="$(find . -maxdepth 4 -type f \( -name 'build.gradle.kts' -o -name 'build.gradle' \) -print -quit)"
-  if [ -n "$GRADLE_FILES" ]; then
-    while IFS= read -r gf; do
-      [ -f "$gf" ] || continue
-      echo ">>> Parcheando $gf"
-      cp "$gf" "$gf.bak" || true
-      if [[ "$gf" == *.kts ]]; then
-        sed -i -E "s/(minSdk)\s*=\s*[0-9]+/\1 = $MIN_SDK/g" "$gf" || true
-      else
-        sed -i -E "s/(minSdkVersion)\s*(=\s*)?[0-9]+/\1 $MIN_SDK/g" "$gf" || true
-        sed -i -E "s/(minSdk)\s*=\s*[0-9]+/\1 = $MIN_SDK/g" "$gf" || true
-      fi
-    done <<EOF
-$(find . -maxdepth 4 -type f \( -name 'build.gradle.kts' -o -name 'build.gradle' \) -print)
-EOF
-  else
-    echo ">>> No se encontraron archivos build.gradle(.kts) para parchear."
-  fi
+    # --- Patch MainActivity to handle Android back with onKeyDown + view hierarchy search
+    # onBackPressed is deprecated in API 33+ and unreliable with WryActivity.
+    # onKeyDown + recursive WebView search in view hierarchy works on all versions.
+    echo ">>> Parcheando MainActivity para manejar botón Back (onKeyDown + view hierarchy) si existe"
+    while IFS= read -r activity; do
+    [ -f "$activity" ] || continue
+    echo ">>> Revisando $activity"
+    # Skip if already patched
+    if grep -F -q 'findWebViewEverywhere' "$activity"; then
+      echo "    - Patch ya presente en $activity, omitiendo"
+      continue
+    fi
+
+    if [[ "$activity" == *.kt ]]; then
+      python3 - "$activity" <<'PYEOF'
+import sys, re
+path = sys.argv[1]
+src = open(path, 'r', encoding='utf-8').read()
+
+if 'findWebViewEverywhere' in src:
+    print('already-patched')
+    sys.exit(0)
+
+# Extract package declaration and any imports/typealiases above the class
+# The generated file looks like:
+#   package dev.dioxus.main;
+#   import ...;
+#   typealias ...;
+#   class MainActivity : WryActivity()
+# We rewrite it keeping the header but replacing the class declaration with a full body.
+lines = src.splitlines(keepends=True)
+header_lines = []
+class_line_idx = -1
+for i, line in enumerate(lines):
+    stripped = line.strip()
+    if stripped.startswith('class ') or (stripped.startswith('open class ') or stripped.startswith('abstract class ')):
+        class_line_idx = i
+        break
+    header_lines.append(line)
+
+if class_line_idx == -1:
+    print('no-class')
+    sys.exit(1)
+
+# Extract the parent class from the class declaration
+class_decl = lines[class_line_idx].strip().rstrip('{').rstrip()
+# e.g. "class MainActivity : WryActivity()"
+# We'll keep the inheritance as-is and add a body
+
+new_class = class_decl + ' {\n'
+new_class += '''
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val wv = findWebViewEverywhere()
+                if (wv != null) {
+                    // Dioxus uses pushState/replaceState so canGoBack() is unreliable.
+                    // Check pathname via JS: if we are at root ("/") exit, otherwise go back.
+                    wv.evaluateJavascript(
+                        "(function(){var p=window.location.pathname;if(p==='/'||p===''||p==='/index.html'){return 1;}window.history.back();return 0;})()"
+                    ) { result ->
+                        if (result != "0") {
+                            isEnabled = false
+                            onBackPressedDispatcher.onBackPressed()
+                            isEnabled = true
+                        }
+                    }
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
+    }
+
+    private fun findWebViewEverywhere(): android.webkit.WebView? {
+        // 1. Search view hierarchy from decor view
+        findWebViewInHierarchy(window.decorView)?.let { return it }
+        // 2. Reflection over fields in this class and all superclasses
+        var clazz: Class<*>? = this.javaClass
+        while (clazz != null && clazz != Any::class.java) {
+            for (field in clazz.declaredFields) {
+                try {
+                    field.isAccessible = true
+                    val v = field.get(this)
+                    if (v is android.webkit.WebView) return v
+                } catch (_: Throwable) {}
+            }
+            clazz = clazz.superclass
+        }
+        return null
+    }
+
+    private fun findWebViewInHierarchy(view: android.view.View): android.webkit.WebView? {
+        if (view is android.webkit.WebView) return view
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = findWebViewInHierarchy(view.getChildAt(i))
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+}
+'''
+
+result = ''.join(header_lines) + new_class
+open(path, 'w', encoding='utf-8').write(result)
+print('patched')
+PYEOF
+      echo "    - Patch intentado en $activity"
+    fi
+
+    if [[ "$activity" == *.java ]]; then
+      python3 - "$activity" <<'PYEOF'
+import sys
+path = sys.argv[1]
+src = open(path, 'r', encoding='utf-8').read()
+if 'findWebViewEverywhere' in src:
+    print('already-patched')
+    sys.exit(0)
+lines = src.splitlines(keepends=True)
+header_lines = []
+class_line_idx = -1
+for i, line in enumerate(lines):
+    if line.strip().startswith('class ') or line.strip().startswith('public class '):
+        class_line_idx = i
+        break
+    header_lines.append(line)
+if class_line_idx == -1:
+    print('no-class')
+    sys.exit(1)
+class_decl = lines[class_line_idx].strip().rstrip('{').rstrip()
+new_class = class_decl + ' {\n'
+new_class += '''
+    @Override
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        final androidx.activity.OnBackPressedDispatcher dispatcher = getOnBackPressedDispatcher();
+        dispatcher.addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                android.webkit.WebView wv = findWebViewEverywhere();
+                if (wv != null) {
+                    // Dioxus uses pushState/replaceState so canGoBack() is unreliable.
+                    // Check pathname via JS: if we are at root ("/") exit, otherwise go back.
+                    wv.evaluateJavascript(
+                        "(function(){var p=window.location.pathname;if(p==='/'||p===''||p==='/index.html'){return 1;}window.history.back();return 0;})()",
+                        result -> {
+                            if (!"0".equals(result)) {
+                                setEnabled(false);
+                                dispatcher.onBackPressed();
+                                setEnabled(true);
+                            }
+                        });
+                } else {
+                    setEnabled(false);
+                    dispatcher.onBackPressed();
+                    setEnabled(true);
+                }
+            }
+        });
+    }
+
+    private android.webkit.WebView findWebViewEverywhere() {
+        android.webkit.WebView wv = findWebViewInHierarchy(getWindow().getDecorView());
+        if (wv != null) return wv;
+        Class<?> clazz = this.getClass();
+        while (clazz != null && !clazz.equals(Object.class)) {
+            for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
+                try {
+                    field.setAccessible(true);
+                    Object v = field.get(this);
+                    if (v instanceof android.webkit.WebView) return (android.webkit.WebView) v;
+                } catch (Throwable t) {}
+            }
+            clazz = clazz.getSuperclass();
+        }
+        return null;
+    }
+
+    private android.webkit.WebView findWebViewInHierarchy(android.view.View view) {
+        if (view instanceof android.webkit.WebView) return (android.webkit.WebView) view;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup vg = (android.view.ViewGroup) view;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                android.webkit.WebView found = findWebViewInHierarchy(vg.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+}
+'''
+result = ''.join(header_lines) + new_class
+open(path, 'w', encoding='utf-8').write(result)
+print('patched')
+PYEOF
+    fi
+
+    done < <(find app/src -type f \( -name 'MainActivity.kt' -o -name 'MainActivity.java' \) -print 2>/dev/null || true)
 
   echo ">>> Ejecutando ./gradlew clean"
   ./gradlew clean || true
 
-  # --- Ensure module build will produce a universal APK + per-ABI splits
+  # --- Patch build.gradle.kts: añadir useLegacyPackaging=true en release
+  # Necesario para que Gradle extraiga el .so del APK antes de cargarlo.
+  # Trabaja junto con extractNativeLibs=true en el manifest.
   MODULE_BUILD="app/build.gradle.kts"
-  if [ -f "$MODULE_BUILD" ]; then
+  if [ -f "$MODULE_BUILD" ] && ! grep -q "useLegacyPackaging" "$MODULE_BUILD"; then
+    echo ">>> Añadiendo useLegacyPackaging=true al bloque release en $MODULE_BUILD"
+    python3 - "$MODULE_BUILD" <<'PYEOF'
+import sys, re
+path = sys.argv[1]
+content = open(path).read()
+# Insert packaging block inside getByName("release") { ... }
+pattern = r'(getByName\("release"\)\s*\{)'
+replacement = r'''\1
+            packaging {
+                jniLibs.useLegacyPackaging = true
+            }'''
+new = re.sub(pattern, replacement, content, count=1)
+open(path, 'w').write(new)
+print('useLegacyPackaging injected' if new != content else 'no change')
+PYEOF
+  else
+    echo ">>> useLegacyPackaging ya presente en $MODULE_BUILD o archivo no encontrado"
+  fi
+  # Si SINGLE_ARCH=true (una sola arquitectura de prueba), no se inyectan splits
+  # para evitar generar APKs innecesarios de otras ABIs.
+  MODULE_BUILD="app/build.gradle.kts"
+  if [ "$SINGLE_ARCH" = "true" ]; then
+    echo ">>> SINGLE_ARCH=true — omitiendo inyección de splits ABI"
+  elif [ -f "$MODULE_BUILD" ]; then
     if ! grep -q "isUniversalApk" "$MODULE_BUILD"; then
       echo ">>> Añadiendo splits ABI para generar APK universal en $MODULE_BUILD"
       python3 - "$MODULE_BUILD" <<'PYEOF'
@@ -128,7 +339,7 @@ PYEOF
     else
       echo ">>> splits ABI ya presente en $MODULE_BUILD"
     fi
-  fi
+  fi  # end SINGLE_ARCH check
 
   # Icon handling
   if [ -n "$ICONS_DIR" ] && [ -d "$ICONS_DIR/res" ]; then
@@ -188,22 +399,15 @@ PYEOF
 </resources>
 COLOREOF
 
-      # Adaptive icon v26+:
-      #   <background>  = color sólido (no el mismo PNG, eso causaba el icono duplicado)
-      #   <foreground>  = PNG del icono
-      IC_DIR="app/src/main/res/mipmap-anydpi-v26"
-      mkdir -p "$IC_DIR"
-      for xml_name in ic_launcher ic_launcher_round; do
-        cat > "$IC_DIR/${xml_name}.xml" <<'ICEOF'
-<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background"/>
-    <foreground android:drawable="@mipmap/ic_launcher"/>
-</adaptive-icon>
-ICEOF
-      done
+      # Borrar los XMLs de adaptive icon en mipmap-anydpi-v26 para que Android use
+      # directamente los PNGs por densidad. Si estos XMLs existen (aunque apunten a un
+      # drawable separado) Android 26+ puede ignorar los PNGs y mostrar el icono por
+      # defecto. La solución: eliminarlos y no recrearlos.
+      echo ">>> Eliminando XMLs de adaptive icon en mipmap-anydpi-v26 (usando solo PNGs por densidad)"
+      rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml || true
+      rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml || true
 
-      echo ">>> Iconos generados en res/mipmap-*"
+      echo ">>> Iconos generados en res/mipmap-* (sin adaptive icon XML)"
     else
       echo ">>> ICONS_DIR no establecido y no existe $ASSET_ICON — omitiendo reemplazo de iconos."
     fi
@@ -232,6 +436,43 @@ ICEOF
     # Si no hay uno explícito, coger el primero disponible
     if [ -z "$UNIVERSAL_APK" ]; then
       UNIVERSAL_APK="$(find "$APK_OUTPUT_DIR" -name "*.apk" -print -quit 2>/dev/null || true)"
+    fi
+    # Deduplicate ALL_APKS into UNIQUE_APKS
+    UNIQUE_APKS=()
+    for apk in "${ALL_APKS[@]}"; do
+      skip=0
+      for u in "${UNIQUE_APKS[@]}"; do
+        if [ "$u" = "$apk" ]; then skip=1; break; fi
+      done
+      [ $skip -eq 0 ] && UNIQUE_APKS+=("$apk")
+    done
+
+    # If single-architecture build or only one apk produced, pick one primary APK
+    if [ "${SINGLE_ARCH:-false}" = "true" ] || [ "${#UNIQUE_APKS[@]}" -le 1 ]; then
+      PRIMARY_APK=""
+      # Prefer a universal artifact if present
+      for apk in "${UNIQUE_APKS[@]}"; do
+        lname=$(basename "$apk" | tr '[:upper:]' '[:lower:]')
+        if echo "$lname" | grep -q "universal" || echo "$lname" | grep -q "app-release"; then
+          PRIMARY_APK="$apk"
+          break
+        fi
+      done
+      # fallback to first
+      if [ -z "$PRIMARY_APK" ] && [ "${#UNIQUE_APKS[@]}" -gt 0 ]; then
+        PRIMARY_APK="${UNIQUE_APKS[0]}"
+      fi
+
+      # Remove other APKs in the output dir to keep a single artifact for pipelines
+      if [ -n "$PRIMARY_APK" ]; then
+        for f in "${UNIQUE_APKS[@]}"; do
+          if [ "$f" != "$PRIMARY_APK" ]; then
+            rm -f "$f" || true
+          fi
+        done
+        # rebuild ALL_APKS to only include primary
+        ALL_APKS=("$PRIMARY_APK")
+      fi
     fi
     # Lista completa
     while IFS= read -r apk; do
@@ -314,6 +555,13 @@ ICEOF
         ABI_LABEL="x86"
       fi
 
+      # Si solo hay un APK (SINGLE_ARCH o lista de ALL_APKS de tamaño 1) o el nombre
+      # parece ser un release genérico (app-release), tratarlo como "universal" para
+      # evitar generar nombres "unknown-...".
+      if [ "${SINGLE_ARCH:-false}" = "true" ] || [ "${#ALL_APKS[@]}" -eq 1 ] || echo "$lname" | grep -Eq "release|app-release|app-release-aligned"; then
+        ABI_LABEL="universal"
+      fi
+
       # Nombre bonito: <arch>-<app>-v<version>.apk (prefiere signed, luego aligned, luego original)
       OUT_NAME="${APK_OUTPUT_DIR}/${ABI_LABEL}-${APP_NAME}-v${APP_VERSION}.apk"
       if [ -f "$SIGNED" ]; then
@@ -343,6 +591,41 @@ ICEOF
       UNIV_ALIGNED="${APK_OUTPUT_DIR}/${UNIV_BASENAME}-aligned.apk"
       [ -f "$UNIV_SIGNED"  ] && cp "$UNIV_SIGNED"  "app-release-signed.apk"  || true
       [ -f "$UNIV_ALIGNED" ] && cp "$UNIV_ALIGNED" "app-release-aligned.apk" || true
+    fi
+
+    # También crear en la raíz un APK con nombre legible: <arch>-<slug>-v<version>.apk
+    # Preferimos la variante 'universal' generada en $APK_OUTPUT_DIR
+    NICE_BASENAME="universal-${APP_NAME}-v${APP_VERSION}.apk"
+    if [ -f "${APK_OUTPUT_DIR}/${NICE_BASENAME}" ]; then
+      cp "${APK_OUTPUT_DIR}/${NICE_BASENAME}" "${NICE_BASENAME}" || true
+    else
+      # Buscar cualquier artefacto ya renombrado en APK_OUTPUT_DIR que incluya el slug+version
+      match=$(find "$APK_OUTPUT_DIR" -maxdepth 1 -type f -name "*-${APP_NAME}-v${APP_VERSION}.apk" -print -quit 2>/dev/null || true)
+      if [ -n "$match" ]; then
+        base=$(basename "$match")
+        cp "$match" "$base" || true
+      else
+        # Fallback: copiar app-release-aligned/signed si existen y renombrarlas
+        if [ -f "app-release-aligned.apk" ]; then
+          cp "app-release-aligned.apk" "${NICE_BASENAME}" || true
+        elif [ -f "app-release-signed.apk" ]; then
+          cp "app-release-signed.apk" "${NICE_BASENAME}" || true
+        fi
+      fi
+    fi
+
+    # Eliminar APKs duplicados en el directorio de salida cuando solo usamos una arquitectura
+    if [ "${SINGLE_ARCH:-false}" = "true" ] || [ "${#ALL_APKS[@]}" -le 1 ]; then
+        echo ">>> SINGLE_ARCH o único APK — limpiando duplicados en $APK_OUTPUT_DIR"
+      # Encontrar todos los APKs bajo el directorio de la app y eliminar los que no sean el NICE_BASENAME
+        find "$APK_OUTPUT_DIR" -type f -name "*.apk" | while read -r p; do
+        base=$(basename "$p")
+        if [ "$base" != "${NICE_BASENAME}" ] && [ "$base" != "app-release-signed.apk" ] && [ "$base" != "app-release-aligned.apk" ]; then
+          echo ">>> Removing duplicate APK: $p"
+          rm -f "$p" || true
+        fi
+      done
+      # Asegurar que solo queden el NICE_BASENAME y los app-release-*.apk en outputs
     fi
 
     if [ "$INSTALL" = "true" ]; then

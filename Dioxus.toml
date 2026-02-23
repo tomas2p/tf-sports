@@ -33,7 +33,7 @@ resources = ["/assets/robots.txt"]
 short_description = "Agenda deportiva y directorio de instalaciones en Tenerife"
 long_description = "TF Sports — busca eventos deportivos, instalaciones y actividades en Tenerife. Mapas, calendarios y filtros para encontrar lo que busques."
 # Categoría orientativa
-category = "Sports"
+category = "health-and-fitness"
 # Copyright / publisher notice
 copyright = "Tomás Pino Pérez"
 
