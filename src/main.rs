@@ -136,6 +136,58 @@ fn App() -> Element {
             "(function() {{ const theme = localStorage.getItem('theme'); console.log('Script inicial - tema:', theme); if (theme === 'dark') {{ console.log('Añadiendo clase dark'); document.documentElement.classList.add('dark'); }} }})();"
         }
 
+        // Handler para botón "back" en Android: la web intenta manejar la navegación
+        // internamente antes de que la Activity cierre la app. Registramos un listener
+        // `_android_back` que realiza la navegación en el contexto de la página y marca
+        // `window._android_back_handled` para que el native lo detecte inmediatamente.
+        document::Script {
+            "(function() {{
+                try {{
+                    window._android_back_handled = false;
+                    function _handle_android_back() {{
+                        try {{
+                            // reset
+                            window._android_back_handled = false;
+                            // 1) si hay historial de navegador, usarlo
+                            if (window.history && window.history.length > 1) {{
+                                window.history.back();
+                                window._android_back_handled = true;
+                                return;
+                            }}
+                            // 2) si la app web exporta un hook para retroceder, llamarlo
+                            if (typeof window.appGoBack === 'function') {{
+                                try {{ window.appGoBack(); window._android_back_handled = true; return; }} catch(e) {{ window._android_back_handled = false; return; }}
+                            }}
+                            // 3) no manejado
+                            window._android_back_handled = false;
+                        }} catch(e) {{ window._android_back_handled = false; }}
+                    }}
+                    window.onAndroidBack = _handle_android_back;
+                    window.addEventListener('_android_back', _handle_android_back);
+                }} catch(e) {{}}
+            }})()"
+        }
+
+        // Fallback público que puede llamar la Activity si la app web no exporta
+        // un manejador específico. Intenta usar `history.back()` y marca el
+        // flag `_android_back_handled` cuando hace navegación interna.
+        document::Script {
+            "(function() {{
+                try {{
+                    window.appGoBack = function() {{
+                        try {{
+                            if (window.history && window.history.length > 1) {{
+                                window.history.back();
+                                window._android_back_handled = true;
+                                return;
+                            }}
+                        }} catch(e) {{}}
+                        // no marcado si no se pudo manejar
+                    }};
+                }} catch(e) {{}}
+            }})()"
+        }
+
         // In addition to element and text (which we will see later), rsx can contain other components. In this case,
         // we are using the `document::Link` component to add a link to our favicon and Tailwind CSS file into the head of our app.
         document::Link { rel: "icon", href: FAVICON }

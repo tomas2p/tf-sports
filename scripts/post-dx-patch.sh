@@ -88,7 +88,7 @@ import sys, re
 path = sys.argv[1]
 src = open(path, 'r', encoding='utf-8').read()
 
-if 'findWebViewEverywhere' in src:
+if 'WryActivity.onCreate via OnBackPressedDispatcher' in src:
     print('already-patched')
     sys.exit(0)
 
@@ -122,57 +122,8 @@ new_class = class_decl + ' {\n'
 new_class += '''
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
-        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val wv = findWebViewEverywhere()
-                if (wv != null) {
-                    // Dioxus uses pushState/replaceState so canGoBack() is unreliable.
-                    // Check pathname via JS: if we are at root ("/") exit, otherwise go back.
-                    wv.evaluateJavascript(
-                        "(function(){var p=window.location.pathname;if(p==='/'||p===''||p==='/index.html'){return 1;}window.history.back();return 0;})()"
-                    ) { result ->
-                        if (result != "0") {
-                            isEnabled = false
-                            onBackPressedDispatcher.onBackPressed()
-                            isEnabled = true
-                        }
-                    }
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                    isEnabled = true
-                }
-            }
-        })
-    }
-
-    private fun findWebViewEverywhere(): android.webkit.WebView? {
-        // 1. Search view hierarchy from decor view
-        findWebViewInHierarchy(window.decorView)?.let { return it }
-        // 2. Reflection over fields in this class and all superclasses
-        var clazz: Class<*>? = this.javaClass
-        while (clazz != null && clazz != Any::class.java) {
-            for (field in clazz.declaredFields) {
-                try {
-                    field.isAccessible = true
-                    val v = field.get(this)
-                    if (v is android.webkit.WebView) return v
-                } catch (_: Throwable) {}
-            }
-            clazz = clazz.superclass
-        }
-        return null
-    }
-
-    private fun findWebViewInHierarchy(view: android.view.View): android.webkit.WebView? {
-        if (view is android.webkit.WebView) return view
-        if (view is android.view.ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val found = findWebViewInHierarchy(view.getChildAt(i))
-                if (found != null) return found
-            }
-        }
-        return null
+        // Back navigation is fully handled by WryActivity.onCreate via OnBackPressedDispatcher
+        // (uses window.onAndroidBack JS handler registered by Dioxus Router).
     }
 }
 '''
@@ -215,12 +166,15 @@ new_class += '''
             public void handleOnBackPressed() {
                 android.webkit.WebView wv = findWebViewEverywhere();
                 if (wv != null) {
-                    // Dioxus uses pushState/replaceState so canGoBack() is unreliable.
-                    // Check pathname via JS: if we are at root ("/") exit, otherwise go back.
+                    // Dioxus Router manages SPA history via pushState; pathname always returns "/".
+                    // onAndroidBack FIRST: Rust/Dioxus knows the real route and handles exit at home.
+                    // Result format: "0|reason|path|hash" (handled) or "1|reason|..." (exit Activity).
                     wv.evaluateJavascript(
-                        "(function(){var p=window.location.pathname;if(p==='/'||p===''||p==='/index.html'){return 1;}window.history.back();return 0;})()",
+                      "(function(){try{var p=window.location.pathname||'';var h=window.location.hash||'';window._android_back_handled=false;try{if(typeof window.onAndroidBack==='function'){try{window.onAndroidBack();}catch(e){}}}catch(e){};if(window._android_back_handled){return '0|handler|'+p+'|'+h;}if(p==='/'||p===''||p==='/index.html'){return '1|root|'+p+'|'+h;}if(h){window.history.back();return '0|hash|'+p+'|'+h;}return '1|no-handler|'+p+'|'+h;}catch(e){return '1|error|'+String(e);} })()",
                         result -> {
-                            if (!"0".equals(result)) {
+                            String code = result != null ? result.replace("\"", "") : "1";
+                            android.util.Log.d("BackNav", "back-check: " + code);
+                            if (!code.startsWith("0")) {
                                 setEnabled(false);
                                 dispatcher.onBackPressed();
                                 setEnabled(true);
@@ -272,6 +226,295 @@ PYEOF
     fi
 
     done < <(find app/src -type f \( -name 'MainActivity.kt' -o -name 'MainActivity.java' \) -print 2>/dev/null || true)
+
+    # --- Patch WryActivity to persist improved back handling (OnBackPressedDispatcher + WebView JS check)
+    echo ">>> Parcheando WryActivity para manejo persistente de Back si existe"
+    while IFS= read -r activity; do
+      [ -f "$activity" ] || continue
+      echo ">>> Revisando $activity"
+      # Skip if already patched (has our callback or helper)
+      if grep -F -q 'OnBackPressedCallback' "$activity" || grep -F -q 'findWebViewEverywhere' "$activity"; then
+        echo "    - Patch ya presente en $activity, omitiendo"
+        continue
+      fi
+
+      if [[ "$activity" == *.kt ]]; then
+        cat > "$activity" <<'WREYK'
+/* THIS FILE IS AUTO-GENERATED. DO NOT MODIFY!! (patched to improve back handling) */
+
+// Copyright 2020-2026 Tauri Programme within The Commons Conservancy
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+
+package dev.dioxus.main
+
+import dev.dioxus.main.RustWebView
+import android.annotation.SuppressLint
+import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import android.view.KeyEvent
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebView
+import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AppCompatActivity
+
+abstract class WryActivity : AppCompatActivity() {
+	private lateinit var mWebView: RustWebView
+
+	/**
+	 * If true, the activity will attempt to handle back navigation by consulting the WebView's
+	 * history (via JS check for single-page apps) before falling back to default behavior.
+	 */
+	open val handleBackNavigation: Boolean = true
+
+	private val TAG = "WryActivity"
+
+	open fun onWebViewCreate(webView: WebView) {}
+
+	fun setWebView(webView: RustWebView) {
+		mWebView = webView
+		onWebViewCreate(webView)
+	}
+
+	val version: String
+		@SuppressLint("WebViewApiAvailability", "ObsoleteSdkInt")
+		get() {
+			// Check getCurrentWebViewPackage() directly if above Android 8
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+				return WebView.getCurrentWebViewPackage()?.versionName ?: ""
+			}
+
+			// Otherwise manually check WebView versions
+			var webViewPackage = "com.google.android.webview"
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+				webViewPackage = "com.android.chrome"
+			}
+			try {
+				@Suppress("DEPRECATION")
+				val info = packageManager.getPackageInfo(webViewPackage, 0)
+				return info.versionName.toString()
+			} catch (ex: Exception) {
+				Logger.warn("Unable to get package info for '$webViewPackage'$ex")
+			}
+
+			try {
+				@Suppress("DEPRECATION")
+				val info = packageManager.getPackageInfo("com.android.webview", 0)
+				return info.versionName.toString()
+			} catch (ex: Exception) {
+				Logger.warn("Unable to get package info for 'com.android.webview'$ex")
+			}
+
+			// Could not detect any webview, return empty string
+			return ""
+		}
+
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
+		create(this)
+
+		// Register a back callback that prefers webview history for SPA-like apps.
+		if (handleBackNavigation) {
+			onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+				override fun handleOnBackPressed() {
+					Log.d(TAG, "OnBackPressedCallback invoked")
+					try {
+						val wv = findWebViewEverywhere()
+						if (wv != null) {
+							// Dioxus Router manages SPA history via pushState; window.history.back() is unreliable.
+							// 1) root path → exit Activity.
+							// 2) window.onAndroidBack (registered by Rust) → navigator.go_back() inside Dioxus.
+							// 3) hash fallback.  Result: "0|reason|path|hash" (handled) / "1|reason|..." (exit).
+							val js =
+                                "(function(){try{var p=window.location.pathname||'';var h=window.location.hash||'';window._android_back_handled=false;try{if(typeof window.onAndroidBack==='function'){try{window.onAndroidBack();}catch(e){}}}catch(e){};if(window._android_back_handled){return '0|handler|'+p+'|'+h;}if(p==='/'||p===''||p==='/index.html'){return '1|root|'+p+'|'+h;}if(h){window.history.back();return '0|hash|'+p+'|'+h;}return '1|no-handler|'+p+'|'+h;}catch(e){return '1|error|'+String(e);} })()"
+							wv.evaluateJavascript(js) { result ->
+								val normalized = result?.replace("\"", "") ?: "1"
+								Log.d(TAG, "BackNav: $normalized")
+								if (!normalized.startsWith("0")) {
+									// Back not handled by web; delegate to system (exit Activity)
+									isEnabled = false
+									onBackPressedDispatcher.onBackPressed()
+									isEnabled = true
+								} else {
+									// Back handled by Dioxus Router (onAndroidBack) or hash navigation.
+								}
+							}
+						} else {
+							// No WebView found; fallback to default behavior
+							isEnabled = false
+							onBackPressedDispatcher.onBackPressed()
+							isEnabled = true
+						}
+					} catch (t: Throwable) {
+						Log.w(TAG, "Error while handling back press, delegating to system", t)
+						isEnabled = false
+						onBackPressedDispatcher.onBackPressed()
+						isEnabled = true
+					}
+				}
+			})
+		}
+	}
+
+	override fun onStart() {
+		super.onStart()
+		start()
+	}
+
+	override fun onResume() {
+		super.onResume()
+		resume()
+	}
+
+	override fun onPause() {
+		super.onPause()
+		pause()
+	}
+
+	override fun onStop() {
+		super.onStop()
+		stop()
+	}
+
+	override fun onWindowFocusChanged(hasFocus: Boolean) {
+		super.onWindowFocusChanged(hasFocus)
+		focus(hasFocus)
+	}
+
+	override fun onSaveInstanceState(outState: Bundle) {
+		super.onSaveInstanceState(outState)
+		save()
+	}
+
+	override fun onDestroy() {
+		super.onDestroy()
+		destroy()
+		onActivityDestroy()
+	}
+
+	override fun onLowMemory() {
+		super.onLowMemory()
+		memory()
+	}
+
+	/**
+	 * Keep onKeyDown as a defensive fallback for devices where key events are delivered but
+	 * OnBackPressedDispatcher callbacks are somehow bypassed. Prefer the dispatcher behavior.
+	 */
+	override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+		Log.d(TAG, "onKeyDown received keyCode=$keyCode event=$event")
+		try {
+			if (handleBackNavigation && keyCode == KeyEvent.KEYCODE_BACK) {
+				Log.d(TAG, "Hardware BACK pressed - handleBackNavigation=$handleBackNavigation")
+				// If we have a WebView and it canGoBack (legacy check), use it as a fallback.
+				if (this::mWebView.isInitialized) {
+					try {
+						if (mWebView.canGoBack()) {
+							Log.d(TAG, "mWebView.canGoBack() == true -> navigating webview back")
+							mWebView.goBack()
+							return true
+						} else {
+							Log.d(TAG, "mWebView.canGoBack() == false")
+						}
+					} catch (t: Throwable) {
+						Log.w(TAG, "Error checking mWebView.canGoBack(): $t")
+						// ignore and fallthrough to dispatcher
+					}
+				} else {
+					Log.d(TAG, "mWebView not initialized")
+				}
+				// Let the OnBackPressedDispatcher handle it (this will trigger our callback)
+				Log.d(TAG, "Delegating back to OnBackPressedDispatcher")
+				onBackPressedDispatcher.onBackPressed()
+				return true
+			}
+		} catch (t: Throwable) {
+			Log.w(TAG, "Exception in onKeyDown handler: $t")
+		}
+		return super.onKeyDown(keyCode, event)
+	}
+
+	/**
+	 * Search for a WebView instance by:
+	 *  1) traversing the window decor view hierarchy, then
+	 *  2) reflecting over fields in this class and superclasses (some integrations hold the view as a field).
+	 * Protected so subclasses (MainActivity) can call it without redefinition.
+	 */
+	protected open fun findWebViewEverywhere(): android.webkit.WebView? {
+		try {
+			val decor = window?.decorView
+			if (decor != null) {
+				findWebViewInHierarchy(decor)?.let { return it }
+			}
+		} catch (_: Throwable) {
+		}
+
+		try {
+			var clazz: Class<*>? = this.javaClass
+			while (clazz != null && clazz != Any::class.java) {
+				for (field in clazz.declaredFields) {
+					try {
+						field.isAccessible = true
+						val v = field.get(this)
+						if (v is android.webkit.WebView) return v
+					} catch (_: Throwable) {
+					}
+				}
+				clazz = clazz.superclass
+			}
+		} catch (_: Throwable) {
+		}
+		return null
+	}
+
+	protected open fun findWebViewInHierarchy(view: android.view.View): android.webkit.WebView? {
+		if (view is android.webkit.WebView) return view
+		if (view is android.view.ViewGroup) {
+			val vg = view as android.view.ViewGroup
+			for (i in 0 until vg.childCount) {
+				try {
+					val found = findWebViewInHierarchy(vg.getChildAt(i))
+					if (found != null) return found
+				} catch (_: Throwable) {
+				}
+			}
+		}
+		return null
+	}
+
+	fun getAppClass(name: String): Class<*> {
+		return Class.forName(name)
+	}
+
+	companion object {
+		init {
+			System.loadLibrary("dioxusmain")
+		}
+	}
+
+	private external fun create(activity: WryActivity)
+	private external fun start()
+	private external fun resume()
+	private external fun pause()
+	private external fun stop()
+	private external fun save()
+	private external fun destroy()
+	private external fun onActivityDestroy()
+	private external fun memory()
+	private external fun focus(focus: Boolean)
+}
+WREYK
+        echo "    - WryActivity.kt parcheado en $activity"
+      fi
+
+      if [[ "$activity" == *.java ]]; then
+        # For java variant, skip automatic patching for now (rare). Keep the file as-is and warn.
+        echo "    - WryActivity.java detectado; parcheo automático no implementado, por favor revisa manualmente: $activity"
+      fi
+
+    done < <(find app/src -type f \( -name 'WryActivity.kt' -o -name 'WryActivity.java' \) -print 2>/dev/null || true)
 
   echo ">>> Ejecutando ./gradlew clean"
   ./gradlew clean || true
@@ -641,7 +884,7 @@ COLOREOF
 
   cd "$ROOT"
 else
-  echo ">>> No se encontró target/dx/*/release/android/app — omitiendo pasos de iconos/optimización." 
+  echo ">>> No se encontró target/dx/*/release/android/app — omitiendo pasos de iconos/optimización."
 fi
 
 echo ">>> Patch completo"
