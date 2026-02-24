@@ -5,8 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ICONS_DIR="${ICONS_DIR:-}"
+ASSET_ICON="$ROOT/assets/pintadera.png"
+
 JKS_FILE="${JKS_FILE:-}"
 KEY_PASSWORD="${KEY_PASSWORD:-}"
+
 INSTALL="${INSTALL:-false}"
 SINGLE_ARCH="${SINGLE_ARCH:-false}"
 
@@ -591,7 +594,6 @@ PYEOF
     cp -r "${ICONS_DIR}/res" app/src/main/ || true
     rm -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml || true
   else
-    ASSET_ICON="$ROOT/assets/android-chrome-512x512.png"
     if [ -f "$ASSET_ICON" ]; then
       echo ">>> Generando iconos desde $ASSET_ICON"
 

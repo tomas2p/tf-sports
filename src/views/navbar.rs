@@ -116,8 +116,9 @@ pub fn Navbar() -> Element {
                 div { class: "flex h-14 items-center justify-between px-4",
                     Link {
                         to: Route::Home {},
-                        class: "text-xl font-bold text-zinc-950 dark:text-zinc-50",
-                        "TF Sports"
+                        class: "flex items-center gap-2",
+                        img { src: asset!("/assets/pintadera.svg"), alt: "Pintadera", class: "h-8 w-auto" }
+                        span { class: "text-xl font-bold text-zinc-950 dark:text-zinc-50", "TF Sports" }
                     }
                     Button {
                         variant: ButtonVariant::Outline,
@@ -183,9 +184,10 @@ pub fn Navbar() -> Element {
                         div { class: "flex flex-col md:flex-row justify-between gap-x-6",
                             Link {
                                 to: Route::Home {},
-                                class: "text-base font-bold text-zinc-950 dark:text-zinc-50 \
-                                        hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors",
-                                "TF Sports"
+                                class: "flex items-center gap-3",
+                                img { src: asset!("/assets/pintadera.svg"), alt: "Pintadera", class: "h-8 w-auto" }
+                                span { class: "text-base font-bold text-zinc-950 dark:text-zinc-50 \
+                                        hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors", "TF Sports" }
                             }
                             div { class: "flex items-center gap-6",
                                 NavLink { to: Route::Events {}, label: "Eventos" }
