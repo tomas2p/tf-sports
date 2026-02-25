@@ -25,7 +25,7 @@ if [ ! -f "$README" ]; then
 fi
 
 # 1) Actualizar badge shields.io (si existe)
-sed -E -i "s@(https://img.shields.io/badge/Version-)[^?]+@\1${VERSION}@" "$README" || true
+sed -E -i "s@(https://img.shields.io/badge/Version-)[^-]+@\1${VERSION}@" "$README" || true
 
 # # 2) Insertar/actualizar una línea 'Versión: X' justo después de la primera aparición del badge
 # BADGE_LINE=$(grep -n -m1 'https://img.shields.io/badge/Version-' "$README" | cut -d: -f1 || true)
