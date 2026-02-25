@@ -932,30 +932,6 @@ COLOREOF
     GIT_TAG="$(git -C "$ROOT" describe --tags --exact-match 2>/dev/null || true)"
     BUILT_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-# Generar archivo fuente comprimido del repositorio (git archive preferido)
-    SOURCE_NAME="${APP_NAME}-v${APP_VERSION}-source.tar.gz"
-    SOURCE_PATH="$RELEASE_DIR/$SOURCE_NAME"
-    if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      git -C "$ROOT" archive --format=tar --prefix="${APP_NAME}-v${APP_VERSION}/" HEAD | gzip > "$SOURCE_PATH" || true
-    else
-      # Fallback: crear tar.gz excluyendo carpetas grandes/indeseadas
-      tar --exclude="$RELEASE_DIR" --exclude="target" --exclude=".git" -C "$ROOT" -czf "$SOURCE_PATH" . || true
-    fi
-
-    # Checksum y tamaño del source archive
-    if command -v sha256sum >/dev/null 2>&1; then
-      SOURCE_SHA256="$(sha256sum "$SOURCE_PATH" | awk '{print $1}')"
-    elif command -v shasum >/dev/null 2>&1; then
-      SOURCE_SHA256="$(shasum -a 256 "$SOURCE_PATH" | awk '{print $1}')"
-    else
-      SOURCE_SHA256=""
-    fi
-    if stat -c%s "$SOURCE_PATH" >/dev/null 2>&1; then
-      SOURCE_SIZE_BYTES="$(stat -c%s "$SOURCE_PATH")"
-    else
-      SOURCE_SIZE_BYTES=0
-    fi
-
     # Escribir metadata mínima en Markdown para GitHub Releases
     cat > "$RELEASE_DIR/release-info.md" <<MD
 # Release: ${APP_NAME} v${APP_VERSION}
@@ -967,10 +943,6 @@ COLOREOF
 **APK**: ${RELEASE_BASENAME}
 
 **SHA256 (APK)**: ${SHA256}
-
-**Fuente**: ${SOURCE_NAME}
-
-**SHA256 (source)**: ${SOURCE_SHA256}
 
 MD
 
