@@ -1,6 +1,8 @@
 [application]
 
 [web.app]
+out_dir = "docs"
+base_path = "tf-sports"
 
 # HTML title tag content
 title = "TF Sports"
