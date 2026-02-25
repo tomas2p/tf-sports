@@ -16,6 +16,27 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROPS_FILE="$ROOT/keystore.properties"
 
+# --- Extraer nombre y versión desde Cargo.toml (pueden ser sobrescritos por env vars)
+APP_NAME_RAW="$(sed -n 's/^name\s*=\s*"\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -n1 || true)"
+if [ -n "${APP_VERSION:-}" ]; then
+  APP_VERSION="$APP_VERSION"
+else
+  APP_VERSION="$(sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -n1 || true)"
+fi
+# Normalizar: quitar prefijo 'v' si existe
+APP_VERSION="$(echo "$APP_VERSION" | sed 's/^v//i')"
+export APP_VERSION APP_NAME_RAW
+
+# Ejecutar sincronización del README si el script existe
+SYNC_SCRIPT="$SCRIPT_DIR/sync-version-to-readme.sh"
+if [ -x "$SYNC_SCRIPT" ]; then
+  echo ">>> Ejecutando $SYNC_SCRIPT"
+  "$SYNC_SCRIPT" || true
+elif [ -f "$SYNC_SCRIPT" ]; then
+  echo ">>> Ejecutando $SYNC_SCRIPT"
+  bash "$SYNC_SCRIPT" || true
+fi
+
 if [ ! -f "$PROPS_FILE" ]; then
   echo "ERROR: $PROPS_FILE no encontrado."
   echo "Copia keystore.properties.example a keystore.properties y rellena los valores."
@@ -93,12 +114,21 @@ if [ -n "${ANDROID_TARGET:-}" ]; then
 elif [ -n "${ANDROID_TARGETS:-}" ]; then
   IFS=',' read -r -a TARGETS <<< "$ANDROID_TARGETS"
 else
-  TARGETS=(
-    # Para pruebas rápidas deja solo una entrada; para release añade todas las que necesites:
-    "aarch64-linux-android:arm64-v8a"
-    # "armv7-linux-androideabi:armeabi-v7a"
-    # "x86_64-linux-android:x86_64"
-  )
+  # Default behavior: use a single-arch build for local testing (aarch64).
+  # To build all three ABIs for a release, set ANDROID_BUILD_MODE=all
+  if [ "${ANDROID_BUILD_MODE:-single}" = "all" ]; then
+    TARGETS=(
+      "aarch64-linux-android:arm64-v8a"
+      "armv7-linux-androideabi:armeabi-v7a"
+      "x86_64-linux-android:x86_64"
+    )
+  else
+    # Single-arch default (chosen by you for faster local tests)
+    TARGETS=(
+      "aarch64-linux-android:arm64-v8a"
+    )
+  fi
+  echo ">>> ANDROID_BUILD_MODE=${ANDROID_BUILD_MODE:-single} — targets: ${TARGETS[*]}"
 fi
 
 # Exportar SINGLE_ARCH si solo hay una arquitectura objetivo para evitar splits innecesarios

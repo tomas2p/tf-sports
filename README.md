@@ -4,8 +4,9 @@
 ![Dioxus](https://img.shields.io/badge/Dioxus-0.7-blue?logo=rust&style=for-the-badge)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1.5-38bdf8?logo=tailwindcss&style=for-the-badge)
 ![Estado](https://img.shields.io/badge/Estado-Activo-brightgreen?style=for-the-badge)
-[![Android Release (Dioxus)](https://github.com/tomas2p/tf-sports/actions/workflows/android-release.yml/badge.svg)](https://github.com/tomas2p/tf-sports/actions/workflows/android-release.yml)
-<!-- ![Licencia](https://img.shields.io/badge/Licencia-MIT-green?style=for-the-badge) -->
+<!-- [![Android Release (Dioxus)](https://github.com/tomas2p/tf-sports/actions/workflows/android-release.yml/badge.svg)](https://github.com/tomas2p/tf-sports/actions/workflows/android-release.yml) -->
+![Version](https://img.shields.io/badge/Version-1.0.3?style=for-the-badge)
+[![Licencia](https://img.shields.io/badge/Licencia-GPL_3.0-green?style=for-the-badge)](LICENSE)
 
 Aplicación web para explorar eventos y espacios deportivos en Tenerife. Construida con [Dioxus 0.7](https://dioxuslabs.com/learn/0.7) y Tailwind CSS.
 

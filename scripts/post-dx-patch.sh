@@ -754,20 +754,25 @@ COLOREOF
     : > "$RELEASE_ASSETS_FILE"
     # Determinar nombre y versión de la app (desde Cargo.toml)
     APP_NAME_RAW="$(sed -n 's/^name\s*=\s*"\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -n1 || true)"
-    # Preferir versión desde etiqueta Git (env GIT_TAG o GITHUB_REF_NAME si están presentes)
-    if [ -n "${GIT_TAG:-}" ]; then
-      APP_VERSION_RAW="$GIT_TAG"
-    elif [ -n "${GITHUB_REF_NAME:-}" ]; then
-      APP_VERSION_RAW="$GITHUB_REF_NAME"
+    # Determinar versión de la app: preferir APP_VERSION (env), luego Cargo.toml, y finalmente git como fallback
+    if [ -n "${APP_VERSION:-}" ]; then
+      APP_VERSION_RAW="$APP_VERSION"
     else
-      APP_VERSION_RAW="$(git -C "$ROOT" describe --tags --exact-match 2>/dev/null || true)"
-      if [ -z "$APP_VERSION_RAW" ]; then
-        APP_VERSION_RAW="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || true)"
-      fi
-    fi
-    # Si no se encontraba tag/git, fallback a Cargo.toml
-    if [ -z "$APP_VERSION_RAW" ]; then
+      # Leer versión directamente desde Cargo.toml
       APP_VERSION_RAW="$(sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' "$ROOT/Cargo.toml" | head -n1 || true)"
+      if [ -z "$APP_VERSION_RAW" ]; then
+        # Si no hay versión en Cargo.toml (rara), intentar obtener desde git/envs
+        if [ -n "${GIT_TAG:-}" ]; then
+          APP_VERSION_RAW="$GIT_TAG"
+        elif [ -n "${GITHUB_REF_NAME:-}" ]; then
+          APP_VERSION_RAW="$GITHUB_REF_NAME"
+        else
+          APP_VERSION_RAW="$(git -C "$ROOT" describe --tags --exact-match 2>/dev/null || true)"
+          if [ -z "$APP_VERSION_RAW" ]; then
+            APP_VERSION_RAW="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+          fi
+        fi
+      fi
     fi
     # Normalizar: quitar prefijo 'v' si existe
     APP_VERSION="$(echo "$APP_VERSION_RAW" | sed 's/^v//i')"
@@ -858,7 +863,6 @@ COLOREOF
         fi
       fi
     fi
-
     # Eliminar APKs duplicados en el directorio de salida cuando solo usamos una arquitectura
     if [ "${SINGLE_ARCH:-false}" = "true" ] || [ "${#ALL_APKS[@]}" -le 1 ]; then
         echo ">>> SINGLE_ARCH o único APK — limpiando duplicados en $APK_OUTPUT_DIR"
@@ -871,6 +875,11 @@ COLOREOF
         fi
       done
       # Asegurar que solo queden el NICE_BASENAME y los app-release-*.apk en outputs
+
+      # Además, eliminar cualquier universal-${APP_NAME}-v*.apk generada en ejecuciones previas
+      find "$APK_OUTPUT_DIR" -maxdepth 1 -type f -name "universal-${APP_NAME}-v*.apk" ! -name "universal-${APP_NAME}-v${APP_VERSION}.apk" -exec echo ">>> Removing older universal APK: {}" \; -exec rm -f {} \; || true
+      # Y limpiar copias en la raíz del proyecto que coincidan con el patrón
+      find "$ROOT" -maxdepth 2 -type f -name "universal-${APP_NAME}-v*.apk" ! -name "universal-${APP_NAME}-v${APP_VERSION}.apk" -exec echo ">>> Removing older root universal APK: {}" \; -exec rm -f {} \; || true
     fi
 
     if [ "$INSTALL" = "true" ]; then
@@ -882,6 +891,93 @@ COLOREOF
     fi
   else
     echo ">>> No se encontró ningún APK en $APK_OUTPUT_DIR — omitiendo zipalign/apksigner."
+  fi
+
+  # --- Preparar release en la raíz: copiar único APK universal a release/ y generar metadata
+  RELEASE_DIR="$ROOT/release"
+  mkdir -p "$RELEASE_DIR"
+
+  # Determinar el APK final preferido
+  FINAL_APK=""
+  if [ -f "${APK_OUTPUT_DIR}/${NICE_BASENAME}" ]; then
+    FINAL_APK="${APK_OUTPUT_DIR}/${NICE_BASENAME}"
+  elif [ -f "${NICE_BASENAME}" ]; then
+    FINAL_APK="${NICE_BASENAME}"
+  else
+    FINAL_APK="$(find "$APK_OUTPUT_DIR" -maxdepth 1 -type f -name "universal-${APP_NAME}-v${APP_VERSION}.apk" -print -quit 2>/dev/null || true)"
+  fi
+
+  if [ -n "$FINAL_APK" ] && [ -f "$FINAL_APK" ]; then
+    cp -f "$FINAL_APK" "$RELEASE_DIR/" || true
+    RELEASE_BASENAME="$(basename "$FINAL_APK")"
+    RELEASE_PATH="$RELEASE_DIR/$RELEASE_BASENAME"
+
+    # Calcular checksum SHA256 (compatible con sistemas donde sha256sum no exista)
+    if command -v sha256sum >/dev/null 2>&1; then
+      SHA256="$(sha256sum "$RELEASE_PATH" | awk '{print $1}')"
+    elif command -v shasum >/dev/null 2>&1; then
+      SHA256="$(shasum -a 256 "$RELEASE_PATH" | awk '{print $1}')"
+    else
+      SHA256=""
+    fi
+
+    # Tamaño en bytes (Linux stat)
+    if stat -c%s "$RELEASE_PATH" >/dev/null 2>&1; then
+      SIZE_BYTES="$(stat -c%s "$RELEASE_PATH")"
+    else
+      SIZE_BYTES=0
+    fi
+
+    GIT_COMMIT="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+    GIT_TAG="$(git -C "$ROOT" describe --tags --exact-match 2>/dev/null || true)"
+    BUILT_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+# Generar archivo fuente comprimido del repositorio (git archive preferido)
+    SOURCE_NAME="${APP_NAME}-v${APP_VERSION}-source.tar.gz"
+    SOURCE_PATH="$RELEASE_DIR/$SOURCE_NAME"
+    if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      git -C "$ROOT" archive --format=tar --prefix="${APP_NAME}-v${APP_VERSION}/" HEAD | gzip > "$SOURCE_PATH" || true
+    else
+      # Fallback: crear tar.gz excluyendo carpetas grandes/indeseadas
+      tar --exclude="$RELEASE_DIR" --exclude="target" --exclude=".git" -C "$ROOT" -czf "$SOURCE_PATH" . || true
+    fi
+
+    # Checksum y tamaño del source archive
+    if command -v sha256sum >/dev/null 2>&1; then
+      SOURCE_SHA256="$(sha256sum "$SOURCE_PATH" | awk '{print $1}')"
+    elif command -v shasum >/dev/null 2>&1; then
+      SOURCE_SHA256="$(shasum -a 256 "$SOURCE_PATH" | awk '{print $1}')"
+    else
+      SOURCE_SHA256=""
+    fi
+    if stat -c%s "$SOURCE_PATH" >/dev/null 2>&1; then
+      SOURCE_SIZE_BYTES="$(stat -c%s "$SOURCE_PATH")"
+    else
+      SOURCE_SIZE_BYTES=0
+    fi
+
+    # Escribir metadata mínima en Markdown para GitHub Releases
+    cat > "$RELEASE_DIR/release-info.md" <<MD
+# Release: ${APP_NAME} v${APP_VERSION}
+
+**Notas**: [Agregar aquí notas de la release, cambios, etc.]
+
+**Versión**: ${APP_VERSION}
+
+**APK**: ${RELEASE_BASENAME}
+
+**SHA256 (APK)**: ${SHA256}
+
+**Fuente**: ${SOURCE_NAME}
+
+**SHA256 (source)**: ${SOURCE_SHA256}
+
+MD
+
+    echo ">>> Release preparado: $RELEASE_PATH"
+    echo ">>> Metadata: $RELEASE_DIR/release-info.md"
+  else
+    echo ">>> No se pudo localizar el APK final para crear release en $RELEASE_DIR"
   fi
 
   cd "$ROOT"
