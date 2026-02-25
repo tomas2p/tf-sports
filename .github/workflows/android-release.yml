@@ -97,6 +97,23 @@ jobs:
             fi
           done
 
+      - name: Make gradlew and scripts executable
+        run: |
+          set -e
+          echo "Setting execute permission for gradlew files and post-dx-patch.sh"
+          # Make any gradlew files produced by dx executable and print them for diagnostics
+          find target -type f -name gradlew -print -exec chmod +x {} + || true
+          # Also check common artifact locations (in case download-artifact flattened dirs)
+          find artifacts -type f -name gradlew -print -exec chmod +x {} + || true
+          # Ensure the repo's post-dx-patch script is executable and show status
+          if [ -f scripts/post-dx-patch.sh ]; then
+            ls -l scripts/post-dx-patch.sh || true
+            chmod +x scripts/post-dx-patch.sh || true
+            echo "post-dx-patch.sh is now executable"
+          else
+            echo "Warning: scripts/post-dx-patch.sh not found in repo"
+          fi
+
       - name: Run post-dx-patch to assemble and sign
         env:
           JKS_FILE: "$GITHUB_WORKSPACE/keystore.jks"
