@@ -26,6 +26,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare keystore.properties (from secrets)
+        if: ${{ secrets.ANDROID_KEY_BASE64 != '' }}
+        env:
+          KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          JKS_PATH="$GITHUB_WORKSPACE/keystore.jks"
+          base64 -d <<< "$KEY_BASE64" > "$JKS_PATH"
+          chmod 600 "$JKS_PATH"
+          echo "password=$KEY_PASSWORD"  >  keystore.properties
+          echo "keyAlias=$KEY_ALIAS"     >> keystore.properties
+          echo "storeFile=$JKS_PATH"     >> keystore.properties
+
       - name: Add Rust Android target
         run: rustup target add ${{ matrix.triple }}
 
