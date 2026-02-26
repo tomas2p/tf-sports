@@ -147,6 +147,8 @@ pub fn Navbar() -> Element {
                 Outlet::<Route> {}
             }
 
+            Footer {}
+
             // Bottom nav: hijo normal del flex, nunca se desplaza
             div {
                 style: "flex-shrink:0;",
