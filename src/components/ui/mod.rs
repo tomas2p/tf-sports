@@ -9,6 +9,7 @@ mod search_bar;
 mod section;
 mod select;
 mod separator;
+mod footer;
 
 pub use badge::*;
 pub use base_layout::BaseLayout;
@@ -21,3 +22,4 @@ pub use search_bar::SearchBar;
 pub use section::*;
 pub use select::*;
 pub use separator::*;
+pub use footer::Footer;

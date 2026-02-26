@@ -1,4 +1,4 @@
-use crate::components::ui::{Button, ButtonShape, ButtonVariant};
+use crate::components::ui::{Button, ButtonShape, ButtonVariant, Footer};
 use crate::theme::Theme;
 use crate::Route;
 use dioxus::prelude::*;
@@ -218,6 +218,7 @@ pub fn Navbar() -> Element {
             main { id: "main-content", class: "flex-1 overflow-auto",
                 Outlet::<Route> {}
             }
+            Footer {}
         }
     }
 }
