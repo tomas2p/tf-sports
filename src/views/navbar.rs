@@ -3,7 +3,9 @@ use crate::theme::Theme;
 use crate::Route;
 use dioxus::prelude::*;
 #[cfg(any(target_os = "android", target_os = "ios"))]
-use dioxus_free_icons::icons::fi_icons::{FiActivity, FiCalendar, FiHome, FiMapPin, FiMoon, FiSun};
+use dioxus_free_icons::icons::fi_icons::{
+    FiActivity, FiCalendar, FiGithub, FiHome, FiInfo, FiMapPin, FiMoon, FiSun,
+};
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use dioxus_free_icons::icons::fi_icons::{FiMoon, FiSun};
 use dioxus_free_icons::Icon;
@@ -120,6 +122,30 @@ pub fn Navbar() -> Element {
                         img { src: asset!("/assets/pintadera.svg"), alt: "Pintadera", class: "h-8 w-auto" }
                         span { class: "text-xl font-bold text-zinc-950 dark:text-zinc-50", "TF Sports" }
                     }
+                    // Boton de informacion (enlace al portfolio de Tomas2p)
+                    Button {
+                        variant: ButtonVariant::Ghost,
+                        shape: ButtonShape::Default,
+                        is_icon: Some(true),
+                        class: "m-2",
+                        onclick: move |_| {
+                            // Abrir portfolio en navegador externo
+                                document::eval(r#"window.open('https://tomas2p.vercel.app')"#);
+                            },
+                        Icon { class: "size-5", icon: FiInfo }
+                    }
+                    // Boton de enlace al repo
+                    Button {
+                        variant: ButtonVariant::Ghost,
+                        shape: ButtonShape::Default,
+                        is_icon: Some(true),
+                        class: "m-2",
+                        onclick: move |_| {
+                            // Abrir repo en navegador externo
+                                document::eval(r#"window.open('https://github.com/tomas2p/tf-sports')"#);
+                            },
+                        Icon { class: "size-5", icon: FiGithub }
+                    }
                     Button {
                         variant: ButtonVariant::Outline,
                         shape: ButtonShape::Default,
@@ -146,8 +172,6 @@ pub fn Navbar() -> Element {
                 style: "flex:1 1 0%; overflow-y:auto; min-height:0;",
                 Outlet::<Route> {}
             }
-
-            Footer {}
 
             // Bottom nav: hijo normal del flex, nunca se desplaza
             div {
