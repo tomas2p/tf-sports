@@ -18,6 +18,10 @@ pub fn Event(id: i32) -> Element {
         eventos().eventos.get(idx).cloned()
     });
 
+    // Obtener breadcrumb del contexto de forma no condicional (hooks siempre en nivel superior)
+    let breadcrumb_ctx =
+        use_context::<Signal<Option<Vec<crate::components::breadcrumb::BreadcrumbItem>>>>();
+
     match evento() {
         Some(evt) => {
             let badge_variant = match evt.get_badge_variant() {
@@ -28,8 +32,7 @@ pub fn Event(id: i32) -> Element {
 
             // Si hay un breadcrumb parcial publicado (por ejemplo desde `Sport`), usarlo y
             // añadir el nombre del evento; si no, usar el breadcrumb por defecto (Eventos).
-            let breadcrumb_ctx =
-                use_context::<Signal<Option<Vec<crate::components::breadcrumb::BreadcrumbItem>>>>();
+            // `breadcrumb_ctx` se obtuvo arriba
             let breadcrumb_items_vec = match breadcrumb_ctx.read().clone() {
                 Some(mut v) => {
                     v.push(crate::components::breadcrumb::BreadcrumbItem {
