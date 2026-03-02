@@ -1,6 +1,6 @@
-<h1 style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+<h1 style="display: flex; justify-content: center; align-items: center; gap: 10px;" align="center">
    <img src="assets/pintadera.svg" alt="Logo de tf-sports" width="80" height="80" />
-   tf-sports
+   <p>tf-sports</p>
 </h1>
 
 <div id="badges" align="center">
