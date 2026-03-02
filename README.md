@@ -10,11 +10,23 @@
 [![Licencia_Proyecto](https://img.shields.io/badge/Licencia_Proyecto-EUPL_v1.2-blue?logo=license&style=for-the-badge)](LICENSE)
 [![Licencia_Multimedia](https://img.shields.io/badge/Licencia_Multimedia-CC_BY--NC_4.0-ec5933?logo=creativecommons&style=for-the-badge)](https://creativecommons.org/licenses/by-nc/4.0/)
 ![Rust](https://img.shields.io/badge/Rust-1.93.0-orange?logo=rust&style=for-the-badge)
-![Dioxus](https://img.shields.io/badge/Dioxus-0.7-blue?logo=rust&style=for-the-badge)
+![Dioxus](https://img.shields.io/badge/Dioxus-0.7.x-blue?logo=rust&style=for-the-badge)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1.5-38bdf8?logo=tailwindcss&style=for-the-badge)
 
 Aplicación web para explorar eventos y espacios deportivos en Tenerife. Construida con [Dioxus 0.7](https://dioxuslabs.com/learn/0.7) y Tailwind CSS.
 </div>
+
+<h2 id="índice">Índice</h2>
+
+1. [Instrucciones de instalación](#instrucciones-de-instalación)
+2. [Características principales](#características-principales)
+3. [Entorno tecnológico](#entorno-tecnológico)
+4. [Estructura del proyecto](#estructura-del-proyecto)
+5. [Uso de datos](#uso-de-datos)
+6. [Personalización de estilos](#personalización-de-estilos)
+7. [Firma Android (keystore)](#firma-android-keystore)
+8. [Licencias](#licencias)
+9. [Contacto y soporte](#contacto-y-soporte)
 
 ## Instrucciones de instalación
 
@@ -58,6 +70,16 @@ Notas:
 - Navegación por categorías, calendario y filtros.
 - UI moderna y responsiva con Dioxus y Tailwind.
 - Carga de datos desde archivos JSON y GeoJSON locales (no requiere servidor externo).
+
+## Entorno tecnológico
+
+- **Lenguaje:** Rust (estable; se recomienda usar la toolchain oficial de Rustup).
+- **Framework UI:** Dioxus 0.7.x (web / fullstack / desktop).
+- **Estilos:** Tailwind CSS (archivo principal en `assets/tailwind.css`).
+- **Build / CLI:** Cargo y Dioxus CLI (`dx`). Scripts de build incluidos en `scripts/` (por ejemplo `./scripts/android-build.sh`).
+- **Móvil / Multiplataforma:** Este repositorio genera la versión web/wasm y contiene utilidades para builds Android.
+- **Datos:** JSON y GeoJSON locales en `data/`.
+- **Notas:** Para desarrollo rápido usar `dx serve`. Para builds reproducibles consulte los scripts en `scripts/`.
 
 ## Estructura del proyecto
 
