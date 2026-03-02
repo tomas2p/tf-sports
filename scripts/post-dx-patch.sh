@@ -938,12 +938,6 @@ COLOREOF
 
 **Notas**: [Agregar aquí notas de la release, cambios, etc.]
 
-**Versión**: ${APP_VERSION}
-
-**APK**: ${RELEASE_BASENAME}
-
-**SHA256 (APK)**: ${SHA256}
-
 MD
 
     echo ">>> Release preparado: $RELEASE_PATH"
