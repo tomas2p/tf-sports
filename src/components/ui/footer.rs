@@ -9,7 +9,7 @@ pub fn Footer() -> Element {
         footer { class: "bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800",
             Container {
                 div { class: "py-6 m-4 text-sm text-zinc-600 dark:text-zinc-400 flex flex-col md:flex-row items-center justify-between gap-3",
-                    div { class: "flex flex-row flex-wrap gap-x-1 items-center justify-center",
+                    div { class: "flex flex-row flex-wrap gap-2 items-center justify-center",
                         a { href: "https://tomas2p.github.io/tf-sports/", "TF-Sports" }
                         " © {year} by "
                         a { href: "https://tomas2p.vercel.app", "Tomás Pino Pérez" }
