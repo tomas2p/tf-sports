@@ -122,45 +122,48 @@ pub fn Navbar() -> Element {
                         img { src: asset!("/assets/pintadera.svg"), alt: "Pintadera", class: "h-8 w-auto" }
                         span { class: "text-xl font-bold text-zinc-950 dark:text-zinc-50", "TF Sports" }
                     }
-                    // Boton de informacion (enlace al portfolio de Tomas2p)
-                    Button {
-                        variant: ButtonVariant::Ghost,
-                        shape: ButtonShape::Default,
-                        is_icon: Some(true),
-                        class: "m-2",
-                        onclick: move |_| {
-                            // Abrir portfolio en navegador externo
-                                document::eval(r#"window.open('https://tomas2p.vercel.app')"#);
+
+                    div { class: "flex items-center gap-2",
+                        // Boton de informacion (enlace al portfolio de Tomas2p)
+                        Button {
+                            variant: ButtonVariant::Ghost,
+                            shape: ButtonShape::Default,
+                            is_icon: Some(true),
+                            class: "m-2",
+                            onclick: move |_| {
+                                // Abrir portfolio en navegador externo
+                                    document::eval(r#"window.open('https://tomas2p.vercel.app')"#);
+                                },
+                            Icon { class: "size-5", icon: FiInfo }
+                        }
+                        // Boton de enlace al repo
+                        Button {
+                            variant: ButtonVariant::Ghost,
+                            shape: ButtonShape::Default,
+                            is_icon: Some(true),
+                            class: "m-2",
+                            onclick: move |_| {
+                                // Abrir repo en navegador externo
+                                    document::eval(r#"window.open('https://github.com/tomas2p/tf-sports')"#);
+                                },
+                            Icon { class: "size-5", icon: FiGithub }
+                        }
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            shape: ButtonShape::Default,
+                            is_icon: Some(true),
+                            class: "m-2",
+                            onclick: move |_| {
+                                let new_theme = theme().toggle();
+                                new_theme.apply();
+                                new_theme.save_to_storage();
+                                theme.set(new_theme);
                             },
-                        Icon { class: "size-5", icon: FiInfo }
-                    }
-                    // Boton de enlace al repo
-                    Button {
-                        variant: ButtonVariant::Ghost,
-                        shape: ButtonShape::Default,
-                        is_icon: Some(true),
-                        class: "m-2",
-                        onclick: move |_| {
-                            // Abrir repo en navegador externo
-                                document::eval(r#"window.open('https://github.com/tomas2p/tf-sports')"#);
-                            },
-                        Icon { class: "size-5", icon: FiGithub }
-                    }
-                    Button {
-                        variant: ButtonVariant::Outline,
-                        shape: ButtonShape::Default,
-                        is_icon: Some(true),
-                        class: "m-2",
-                        onclick: move |_| {
-                            let new_theme = theme().toggle();
-                            new_theme.apply();
-                            new_theme.save_to_storage();
-                            theme.set(new_theme);
-                        },
-                        if matches!(theme(), Theme::Dark) {
-                            Icon { class: "size-5", icon: FiSun }
-                        } else {
-                            Icon { class: "size-5", icon: FiMoon }
+                            if matches!(theme(), Theme::Dark) {
+                                Icon { class: "size-5", icon: FiSun }
+                            } else {
+                                Icon { class: "size-5", icon: FiMoon }
+                            }
                         }
                     }
                 }
