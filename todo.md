@@ -8,4 +8,4 @@
 [x] - APK para Android
 [-] - Refactorizar para simplificar código
 [-] - Mejorar diseño y experiencia de usuario (UI/UX)
-[ ] - Mejorar landing (HOME) añadiendo más minisecciones de las otras funcionalidades
+[-] - Mejorar landing (HOME) añadiendo más minisecciones de las otras funcionalidades
