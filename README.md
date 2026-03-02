@@ -5,7 +5,7 @@
 
 <div id="badges" align="center">
 
-[![Autor](https://img.shields.io/badge/Autor-Tomás_Pino_Pérez-gold?logo=github&style=for-the-badge)](https://github.com/tomas2p)
+[![Autor](https://img.shields.io/badge/Autor-Tomás_Pino_Pérez-gold?logo=github&style=for-the-badge)](https://tomas2p.vercel.app)
 [![Version](https://img.shields.io/badge/Version-1.0.3-white?logo=version&style=for-the-badge)](https://github.com/tomas2p/tf-sports/releases)
 [![Licencia_Proyecto](https://img.shields.io/badge/Licencia_Proyecto-EUPL_v1.2-blue?logo=license&style=for-the-badge)](LICENSE)
 [![Licencia_Multimedia](https://img.shields.io/badge/Licencia_Multimedia-CC_BY--NC_4.0-ec5933?logo=creativecommons&style=for-the-badge)](https://creativecommons.org/licenses/by-nc/4.0/)
