@@ -8,8 +8,8 @@ pub fn Footer() -> Element {
     rsx! {
         footer { class: "bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800",
             Container {
-                div { class: "py-6 m-2 text-sm text-zinc-600 dark:text-zinc-400 flex flex-col md:flex-row items-center justify-between gap-3",
-                    div { class: "flex flex-row items-center",
+                div { class: "py-6 m-4 text-sm text-zinc-600 dark:text-zinc-400 flex flex-col md:flex-row items-center justify-between gap-3",
+                    div { class: "flex flex-row gap-2 items-center",
                         a { href: "https://tomas2p.github.io/tf-sports/", "TF-Sports" }
                         " © {year} by "
                         a { href: "https://tomas2p.vercel.app", "Tomás Pino Pérez" }
@@ -19,11 +19,20 @@ pub fn Footer() -> Element {
                         img { src: "https://mirrors.creativecommons.org/presskit/icons/by.svg", alt: "", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
                         img { src: "https://mirrors.creativecommons.org/presskit/icons/nc.svg", alt: "", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
                     }
-                    nav { class: "flex gap-2",
-                        a { href: "https://tomas2p.vercel.app", class: "hover:underline", "By @Tomas2p" }
-                        a { href: "https://github.com/tomas2p/tf-sports", class: "hover:underline", "GitHub (Source Code)" }
-                        a { href: "https://github.com/tomas2p/tf-sports/releases", class: "hover:underline", "Android (APK)" }
-                        a { href: "https://github.com/tomas2p/tf-sports/LICENSE", class: "hover:underline", "EUPL_v1.2" }
+                    nav { class: "flex flex-wrap gap-2",
+                        // Show links in rows of 2 on mobile, all in a row on md+
+                        for (_i, link) in [
+                            ("https://tomas2p.vercel.app", "By @Tomas2p"),
+                            ("https://github.com/tomas2p/tf-sports", "GitHub (Source Code)"),
+                            ("https://github.com/tomas2p/tf-sports/releases", "Android (APK)"),
+                            ("https://github.com/tomas2p/tf-sports/LICENSE", "EUPL_v1.2"),
+                        ].chunks(2).enumerate() {
+                            div { class: "flex flex-col xs:center xs:flex-row gap-2 w-full xs:w-auto",
+                                for (href, text) in link {
+                                    a { href: href.to_string(), class: "hover:underline", {text.to_string()} }
+                                }
+                            }
+                        }
                     }
                 }
             }
