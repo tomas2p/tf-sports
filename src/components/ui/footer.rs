@@ -2,6 +2,10 @@ use crate::components::ui::Container;
 use chrono::Datelike;
 use dioxus::prelude::*;
 
+const CC_SVG: Asset = asset!("/assets/cc.svg");
+const BY_SVG: Asset = asset!("/assets/by.svg");
+const NC_SVG: Asset = asset!("/assets/nc.svg");
+
 #[component]
 pub fn Footer() -> Element {
     let year = chrono::Local::now().year();
@@ -15,9 +19,9 @@ pub fn Footer() -> Element {
                         a { href: "https://tomas2p.vercel.app", "Tomás Pino Pérez" }
                         " is licensed under "
                         a { href: "https://creativecommons.org/licenses/by-nc/4.0/", "CC BY-NC 4.0" }
-                        img { src: "https://mirrors.creativecommons.org/presskit/icons/cc.svg", alt: "", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
-                        img { src: "https://mirrors.creativecommons.org/presskit/icons/by.svg", alt: "", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
-                        img { src: "https://mirrors.creativecommons.org/presskit/icons/nc.svg", alt: "", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
+                        img { src: CC_SVG, alt: "CC", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
+                        img { src: BY_SVG, alt: "BY", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
+                        img { src: NC_SVG, alt: "NC", style: "max-width: 1em;max-height:1em;margin-left: .2em;" }
                     }
                     nav { class: "grid grid-cols-2 md:grid-cols-4 gap-2 items-center justify-center",
                         for &(href, text) in [

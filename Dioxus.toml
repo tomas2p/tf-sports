@@ -11,7 +11,11 @@ title = "TF Sports"
 [web.resource]
 
 # Additional CSS style files
-style = ["/assets/tailwind.css"]
+# NOTE: Do NOT use this field when the app is served under a sub-path (base_path).
+# The link generated here uses an absolute path from the domain root, which breaks
+# GitHub Pages deployments at /tf-sports/. The CSS is already injected at runtime
+# via `document::Link { href: TAILWIND_CSS }` in main.rs.
+style = []
 
 # Additional JavaScript files
 script = []
